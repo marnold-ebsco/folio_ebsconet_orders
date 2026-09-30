@@ -1,0 +1,4 @@
+openpyxl==3.1.5
+pymarc==5.4.0
+folioclient==1.0.13
+httpx==0.28.1

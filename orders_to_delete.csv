@@ -1,0 +1,8 @@
+# POs / PO lines to delete with folio_delete_orders.py
+# type = PO (delete the whole order and all its lines) or POL (delete one line)
+# number = the PO number (for PO) or the PO line number, e.g. U1234567-1 (for POL)
+# note = optional reminder of why (kept in the log)
+# Only Pending orders are deleted. Lines starting with # are ignored.
+type,number,note
+# PO,U1234567,imported with wrong fund
+# POL,U1234567-2,duplicate line

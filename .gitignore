@@ -1,0 +1,18 @@
+# credentials: only sample.ini belongs in the repo
+*.ini
+!sample.ini
+
+# local environment and caches
+.venv/
+__pycache__/
+.pytest_cache/
+*.code-workspace
+
+# generated output, test uploads and tenant-specific records
+out/
+test_data_created.json
+
+# client / internal data: keep out of the repo
+*.xlsx
+!order_marc_headers.xlsx
+EBSCOnetInstructions.txt

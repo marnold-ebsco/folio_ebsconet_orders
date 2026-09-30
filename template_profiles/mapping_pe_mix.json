@@ -1,0 +1,639 @@
+{
+  "name": "Test P/E mix open order for multiple",
+  "description": "",
+  "incomingRecordType": "MARC_BIBLIOGRAPHIC",
+  "existingRecordType": "ORDER",
+  "marcFieldProtectionSettings": [],
+  "parentProfiles": [],
+  "childProfiles": [],
+  "mappingDetails": {
+    "name": "order",
+    "recordType": "ORDER",
+    "mappingFields": [
+      {
+        "name": "workflowStatus",
+        "enabled": "true",
+        "required": false,
+        "path": "order.po.workflowStatus",
+        "value": "\"Open\"",
+        "subfields": []
+      },
+      {
+        "name": "approved",
+        "enabled": "true",
+        "required": false,
+        "path": "order.po.approved",
+        "booleanFieldAction": "ALL_TRUE",
+        "subfields": []
+      },
+      {
+        "name": "poLinesLimit",
+        "enabled": "false",
+        "required": false,
+        "path": "order.po.poLinesLimit",
+        "value": "\"100\"",
+        "subfields": []
+      },
+      {
+        "name": "overridePoLinesLimit",
+        "enabled": "true",
+        "required": false,
+        "path": "order.po.overridePoLinesLimit",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "prefix",
+        "enabled": "true",
+        "required": false,
+        "path": "order.po.poNumberPrefix",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "poNumber",
+        "enabled": "true",
+        "required": false,
+        "path": "order.po.poNumber",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "suffix",
+        "enabled": "true",
+        "required": false,
+        "path": "order.po.poNumberSuffix",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "vendor",
+        "enabled": "true",
+        "required": false,
+        "path": "order.po.vendor",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "orderType",
+        "enabled": "true",
+        "required": false,
+        "path": "order.po.orderType",
+        "value": "\"One-Time\"",
+        "subfields": []
+      },
+      {
+        "name": "acqUnitIds",
+        "enabled": "true",
+        "required": false,
+        "path": "order.po.acqUnitIds[]",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "assignedTo",
+        "enabled": "true",
+        "required": false,
+        "path": "order.po.assignedTo",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "billTo",
+        "enabled": "true",
+        "required": false,
+        "path": "order.po.billTo",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "shipTo",
+        "enabled": "true",
+        "required": false,
+        "path": "order.po.shipTo",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "manualPo",
+        "enabled": "true",
+        "required": false,
+        "path": "order.po.manualPo",
+        "booleanFieldAction": "ALL_FALSE",
+        "subfields": []
+      },
+      {
+        "name": "reEncumber",
+        "enabled": "true",
+        "required": false,
+        "path": "order.po.reEncumber",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "notes",
+        "enabled": "true",
+        "required": false,
+        "path": "order.po.notes[]",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "title",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.titleOrPackage",
+        "value": "245$a",
+        "subfields": []
+      },
+      {
+        "name": "receivingNote",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.details.receivingNote",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "isAcknowledged",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.details.isAcknowledged",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "subscriptionFrom",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.details.subscriptionFrom",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "subscriptionTo",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.details.subscriptionTo",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "subscriptionInterval",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.details.subscriptionInterval",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "publicationDate",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.publicationDate",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "publisher",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.publisher",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "edition",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.edition",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "contributors",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.contributors[]",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "productIds",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.details.productIds[]",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "description",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.description",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "poLineNumber",
+        "enabled": "false",
+        "required": false,
+        "path": "order.poLine.poLineNumber",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "acquisitionMethod",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.acquisitionMethod",
+        "value": "\"Depository\"",
+        "subfields": []
+      },
+      {
+        "name": "automaticExport",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.automaticExport",
+        "booleanFieldAction": "ALL_FALSE",
+        "subfields": []
+      },
+      {
+        "name": "orderFormat",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.orderFormat",
+        "value": "\"P/E Mix\"",
+        "subfields": []
+      },
+      {
+        "name": "receiptDate",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.receiptDate",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "receiptStatus",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.receiptStatus",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "paymentStatus",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.paymentStatus",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "source",
+        "enabled": "false",
+        "required": false,
+        "path": "order.poLine.source",
+        "value": "\"MARC\"",
+        "subfields": []
+      },
+      {
+        "name": "donor",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.donor",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "selector",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.selector",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "requester",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.requester",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "cancellationRestriction",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.cancellationRestriction",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "rush",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.rush",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "checkinItems",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.checkinItems",
+        "value": "\"false\"",
+        "subfields": []
+      },
+      {
+        "name": "cancellationRestrictionNote",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.cancellationRestrictionNote",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "poLineDescription",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.poLineDescription",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "donorOrganizationIds",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.donorOrganizationIds[]",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "vendorDetail",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.vendorDetail.referenceNumbers[]",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "vendorAccount",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.vendorDetail.vendorAccount",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "instructions",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.vendorDetail.instructions",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "listUnitPrice",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.cost.listUnitPrice",
+        "value": "\"20\"",
+        "subfields": []
+      },
+      {
+        "name": "quantityPhysical",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.cost.quantityPhysical",
+        "value": "\"1\"",
+        "subfields": []
+      },
+      {
+        "name": "additionalCost",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.cost.additionalCost",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "currency",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.cost.currency",
+        "value": "\"USD\"",
+        "subfields": []
+      },
+      {
+        "name": "exchangeRate",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.cost.exchangeRate",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "electronicUnitPrice",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.cost.listUnitPriceElectronic",
+        "value": "\"25\"",
+        "subfields": []
+      },
+      {
+        "name": "quantityElectronic",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.cost.quantityElectronic",
+        "value": "\"1\"",
+        "subfields": []
+      },
+      {
+        "name": "discount",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.cost.discount",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "discountType",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.cost.discountType",
+        "value": "\"percentage\"",
+        "subfields": []
+      },
+      {
+        "name": "fundDistribution",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.fundDistribution[]",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "locations",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.locations[]",
+        "value": "",
+        "repeatableFieldAction": "EXTEND_EXISTING",
+        "subfields": [
+          {
+            "order": 0,
+            "path": "order.poLine.locations[]",
+            "fields": [
+              {
+                "name": "locationId",
+                "enabled": "true",
+                "required": false,
+                "path": "order.poLine.locations[].locationId",
+                "value": "\"cat (cat)\"",
+                "subfields": []
+              },
+              {
+                "name": "quantityPhysical",
+                "enabled": "true",
+                "required": false,
+                "path": "order.poLine.locations[].quantityPhysical",
+                "value": "\"1\"",
+                "subfields": []
+              },
+              {
+                "name": "quantityElectronic",
+                "enabled": "true",
+                "required": false,
+                "path": "order.poLine.locations[].quantityElectronic",
+                "value": "\"1\"",
+                "subfields": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "materialSupplier",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.physical.materialSupplier",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "receiptDue",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.physical.receiptDue",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "expectedReceiptDate",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.physical.expectedReceiptDate",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "createInventory",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.physical.createInventory",
+        "subfields": []
+      },
+      {
+        "name": "materialType",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.physical.materialType",
+        "value": "\"book\"",
+        "subfields": []
+      },
+      {
+        "name": "volumes",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.physical.volumes[]",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "accessProvider",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.eresource.accessProvider",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "activationStatus",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.eresource.activated",
+        "booleanFieldAction": "ALL_FALSE",
+        "subfields": []
+      },
+      {
+        "name": "activationDue",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.eresource.activationDue",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "createInventory",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.eresource.createInventory",
+        "subfields": []
+      },
+      {
+        "name": "materialType",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.eresource.materialType",
+        "value": "\"book\"",
+        "subfields": []
+      },
+      {
+        "name": "trial",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.eresource.trial",
+        "booleanFieldAction": "ALL_FALSE",
+        "subfields": []
+      },
+      {
+        "name": "expectedActivation",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.eresource.expectedActivation",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "userLimit",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.eresource.userLimit",
+        "value": "",
+        "subfields": []
+      },
+      {
+        "name": "resourceUrl",
+        "enabled": "true",
+        "required": false,
+        "path": "order.poLine.eresource.resourceUrl",
+        "value": "",
+        "subfields": []
+      }
+    ],
+    "marcMappingDetails": []
+  },
+  "hidden": false
+}

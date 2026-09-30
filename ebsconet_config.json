@@ -1,0 +1,92 @@
+{
+  "_comment": "TEST values only. Replace fund/expense class/org/location values with real tenant codes.",
+  "headers_file": "order_marc_headers.xlsx",
+  "columns": {
+    "title": "Title Name",
+    "issn": "ISSN",
+    "format": "Format",
+    "start_date": "Start Date",
+    "expiration_date": "Expiration Date",
+    "cost": "Total Cost",
+    "package": "Publisher Package",
+    "publisher": "Publisher Name",
+    "subject": "Subject Category",
+    "order_number": "Order Number",
+    "url": "URL",
+    "title_number_source": "Publisher Product Code"
+  },
+  "added_columns": {
+    "fund": "FOLIO Fund",
+    "expense_class": "FOLIO Expense Class",
+    "org": "FOLIO Org",
+    "package_flag": "Package?",
+    "title_number": "Title Number",
+    "title_number_type": "Title Number Type"
+  },
+  "extra_marc_map": {
+    "FOLIO Fund": "990$f",
+    "FOLIO Expense Class": "990$e",
+    "FOLIO Org": "990$v",
+    "Title Number": "990$i",
+    "Title Number Type": "990$j"
+  },
+  "marc_indicators": {
+    "245": ["0", "0"],
+    "264": [" ", "1"],
+    "856": ["4", "0"]
+  },
+  "marc_output_dir": "marc",
+  "package_title_keywords": ["package", "collection", "suite"],
+  "date_columns": ["Start Date", "Expiration Date", "Invoice Date"],
+  "format_routes": {
+    "online": ["online only", "database", "databases", "e-books", "e-book", "ebooks", "ebook"],
+    "print": ["print"],
+    "pe": ["online + print", "print + online", "print + online + email", "online + print + email", "print + email"]
+  },
+  "excluded_formats": ["fee"],
+  "output_names": {
+    "online": "library-EBSCONET_online.xlsx",
+    "print": "library-EBSCONET-print.xlsx",
+    "pe": "library-EBSCONET_P-E.xlsx"
+  },
+  "rules": {
+    "exclude_zero_cost_package_members": true,
+    "exclude_zero_cost": true,
+    "skip_missing_issn": true,
+    "exempt_costed_packages_from_issn_skip": true
+  },
+  "ongoing": {
+    "interval_days": 365,
+    "is_subscription": true,
+    "manual_renewal": false,
+    "renewal_date_source": "latest_subscription_to"
+  },
+  "fund_by_route": {
+    "online": "TEST-ELEC",
+    "print": "TEST-PRINT",
+    "pe": "TEST-PRINT"
+  },
+  "expense_class_by_subject": {
+    "Physical Sciences": "PHY",
+    "Social Sciences": "SOC"
+  },
+  "folio": {
+    "_comment": "Values used by folio_setup.py. Names/codes must exist on the target tenant.",
+    "profile_name_prefix": "EBSCONET order migration",
+    "vendor_org_code": "ebsconet",
+    "acquisition_method": "Purchase At Vendor System",
+    "currency": "USD",
+    "override_po_lines_limit": "1",
+    "subscription_interval": "1",
+    "title_number_type": "Publisher or distributor number",
+    "create_inventory": "None",
+    "physical_material_type": "journal",
+    "location": "test_ebsconet_location (TEST-EBSCONET-LOC)",
+    "receipt_status": {"online": "Receipt Not Required", "print": "Pending", "pe": "Pending"},
+    "account_payment_method": "Other",
+    "template_dir": "template_profiles"
+  },
+  "default_expense_class": "GEN",
+  "org_by_publisher": {},
+  "default_org": "EBSCO"
+}
