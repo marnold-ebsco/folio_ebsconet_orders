@@ -8,7 +8,7 @@ from openpyxl import Workbook, load_workbook
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-import ebsconet_prep as prep  # noqa: E402
+from pipeline import ebsconet_prep as prep  # noqa: E402
 
 HEADERS = ["Title Name", "ISSN", "Format", "Start Date", "Expiration Date",
            "Order Number", "Total Cost", "Publisher Package", "Publisher Name",

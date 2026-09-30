@@ -8,8 +8,8 @@ from pymarc import MARCReader
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-import ebsconet_to_marc as m  # noqa: E402
-from ebsconet_prep import load_config  # noqa: E402
+from pipeline import ebsconet_to_marc as m  # noqa: E402
+from pipeline.ebsconet_prep import load_config  # noqa: E402
 
 COLS = ["Title Name", "ISSN", "Start Date", "Expiration Date", "Order Number",
         "Total Cost", "Publisher Name", "URL", "Account Number", "Format",

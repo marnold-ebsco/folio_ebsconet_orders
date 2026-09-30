@@ -126,7 +126,7 @@ def main(argv=None):
     if len(targets) > args.max:
         raise SystemExit("%d entries is more than --max %d; raise --max if intended"
                          % (len(targets), args.max))
-    from folio_common import connect
+    from pipeline.folio_common import connect
     client = connect(args.ini)
     print("%d entries; %s (%s)" % (len(targets), "LIVE - DELETING" if args.live
                                    else "dry run", args.ini))

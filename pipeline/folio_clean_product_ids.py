@@ -12,7 +12,7 @@ Dry run unless --live. Only lines of Pending orders are changed.
 """
 import argparse
 
-from folio_ongoing import drop_empty_product_ids, read_po_numbers
+from pipeline.folio_ongoing import drop_empty_product_ids, read_po_numbers
 
 
 def has_empty_entry(line):
@@ -60,9 +60,9 @@ def main(argv=None):
     if args.csv:
         numbers = read_po_numbers(args.csv)
     else:
-        from folio_import import po_numbers
+        from pipeline.folio_import import po_numbers
         numbers = po_numbers(args.mrc)
-    from folio_common import connect
+    from pipeline.folio_common import connect
     results = clean_lines(connect(args.ini), numbers, args.live)
     for number, status, detail in results:
         print("%-16s %-12s %s" % (number, status, detail))

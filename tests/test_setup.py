@@ -8,8 +8,8 @@ from openpyxl import Workbook
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-import folio_setup as fs  # noqa: E402
-from ebsconet_prep import load_config  # noqa: E402
+from pipeline import folio_setup as fs  # noqa: E402
+from pipeline.ebsconet_prep import load_config  # noqa: E402
 
 VENDOR = "b5f89734-a475-4d12-9442-c1ce131c5ed1"
 

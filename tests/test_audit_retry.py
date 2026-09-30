@@ -6,7 +6,7 @@ from pymarc import Field, MARCReader, Record, Subfield
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import folio_import as imp  # noqa: E402
+from pipeline import folio_import as imp  # noqa: E402
 import folio_retry_failed as rt  # noqa: E402
 
 

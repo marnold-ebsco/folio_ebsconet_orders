@@ -19,7 +19,7 @@ from pathlib import Path
 
 from openpyxl import load_workbook
 
-from ebsconet_prep import ROUTES, load_config
+from pipeline.ebsconet_prep import ROUTES, load_config
 
 TEMPLATE_FOR = {"online": "mapping_electronic.json", "print": "mapping_physical.json",
                 "pe": "mapping_pe_mix.json"}
@@ -245,7 +245,7 @@ def main(argv=None):
     p.add_argument("--live", action="store_true", help="actually write to FOLIO")
     args = p.parse_args(argv)
 
-    from folio_common import connect
+    from pipeline.folio_common import connect
     cfg = load_config(args.config)
     fo = cfg["folio"]
     client = connect(args.ini)

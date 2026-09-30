@@ -333,6 +333,54 @@ def prepare(input_path, out_dir, cfg, headers_file=None):
             "duplicate_orders": dupes, "warnings": warnings}
 
 
+def prepare_for_customer(input_path, out_dir, cfg):
+    """Stage 1 of the workflow: the spreadsheet that goes to the customer.
+
+    Removes every zero-dollar line, adds the columns the customer fills in line by line
+    (FOLIO Org, FOLIO Fund and, if used, FOLIO Expense Class; highlighted yellow) and
+    writes <out_dir>/customer/<name>_for_customer.xlsx plus a log of the removed lines.
+    Everything else about the SOP is left untouched; the remaining rules (formats, Fee
+    rows, ...) are applied later, when the filled-in spreadsheet comes back."""
+    c, a = cfg["columns"], cfg["added_columns"]
+    headers, rows = read_sop(input_path)
+    customer_cols = [a["org"], a["fund"]]
+    if cfg["rules"].get("use_expense_classes", True):
+        customer_cols.append(a["expense_class"])
+    columns = headers + [name for name in customer_cols if name not in headers]
+
+    kept, removed = [], []
+    for row in rows:
+        if to_cost(row.get(c["cost"])) == 0:            # blank counts as zero dollars
+            removed.append((row["_row"], row.get(c["title"]), row.get(c["order_number"]),
+                            "Yes" if not blank(row.get(c["package"])) else "No"))
+        else:
+            kept.append(row)
+
+    folder = Path(out_dir) / "customer"
+    folder.mkdir(parents=True, exist_ok=True)
+    stem = Path(input_path).stem
+    target = folder / ("%s_for_customer.xlsx" % stem)
+    write_workbook(target, columns, kept, set(customer_cols))
+    with open(folder / ("%s_zero_dollar_removed.csv" % stem), "w", newline="",
+              encoding="utf-8") as fh:
+        w = csv.writer(fh)
+        w.writerow(["sheet_row", "title", "order_number", "in_a_package"])
+        w.writerows(removed)
+    report = ["Stage 1: spreadsheet for the customer", "Input: %s" % input_path,
+              "Rows read: %d" % len(rows),
+              "Zero-dollar lines removed: %d (%d in a package); listed in %s"
+              % (len(removed), sum(1 for r in removed if r[3] == "Yes"),
+                 "%s_zero_dollar_removed.csv" % stem),
+              "Lines for the customer: %d" % len(kept),
+              "Columns for the customer to fill in (highlighted): %s"
+              % ", ".join(customer_cols),
+              "Send: %s" % target.name]
+    (folder / ("%s_for_customer_report.txt" % stem)).write_text(
+        "\n".join(report) + "\n", encoding="utf-8")
+    return {"read": len(rows), "removed": len(removed), "kept": len(kept),
+            "file": target, "columns": customer_cols}
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("input", help="EBSCONET SOP .xlsx")

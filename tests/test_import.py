@@ -3,7 +3,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import folio_import as imp  # noqa: E402
+from pipeline import folio_import as imp  # noqa: E402
 
 SINCE = "2026-09-30T14:00:00.000+00:00"
 

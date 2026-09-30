@@ -16,9 +16,9 @@ from datetime import datetime
 
 from pymarc import MARCReader
 
-from ebsconet_prep import load_config
-from folio_common import order_lines_limit
-from folio_setup import ROUTE_LABEL
+from pipeline.ebsconet_prep import load_config
+from pipeline.folio_common import order_lines_limit
+from pipeline.folio_setup import ROUTE_LABEL
 
 ERROR, WARN = "ERROR", "WARN"
 URL_OK = re.compile(r"^[a-z][a-z0-9+.\-]*://\S+$")
@@ -347,7 +347,7 @@ def main(argv=None):
     p.add_argument("--config", default="ebsconet_config.json")
     p.add_argument("--job-profile", help="also check this job profile exists")
     args = p.parse_args(argv)
-    from folio_common import connect
+    from pipeline.folio_common import connect
     ok = run_preflight(connect(args.ini), args.mrc, args.route,
                        load_config(args.config), args.job_profile)
     return 0 if ok else 1

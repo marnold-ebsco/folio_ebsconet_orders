@@ -7,10 +7,10 @@ import pytest
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-import folio_common  # noqa: E402
-import folio_export_pols as exp  # noqa: E402
-import folio_ongoing as ong  # noqa: E402
-from ebsconet_prep import load_config  # noqa: E402
+from pipeline import folio_common  # noqa: E402
+from pipeline import folio_export_pols as exp  # noqa: E402
+from pipeline import folio_ongoing as ong  # noqa: E402
+from pipeline.ebsconet_prep import load_config  # noqa: E402
 
 
 class FakeClient:

@@ -15,16 +15,35 @@ Tests: `.venv/bin/python -m pytest -q`. Lint: `.venv/bin/flake8 .`
 Not in the repo (git-ignored): filled-in `*.ini` files, the SOP spreadsheets, `out/`, and
 `EBSCOnetInstructions.txt`. Only `order_marc_headers.xlsx` (the tag map) is tracked.
 
+## How it is organized
+**One command drives the workflow: `ebsconet.py`.** Its steps, in order:
+`for-customer SOP.xlsx` (drop the $0 lines, add the columns the customer fills in) ->
+`build FILLED.xlsx` (process the filled-in file, make the MARC files) -> `setup` (once per
+tenant) -> `load` (preflight and load every MARC file) -> `finish` (ongoing conversion and
+the PO / POL export). See `RUNBOOK.md` for the workflow step by step, including what
+goes to the customer.
+
+| Where | What |
+|---|---|
+| `ebsconet.py` | the entry point above |
+| `pipeline/` | the steps it calls (prep, MARC, setup, preflight, import, ongoing, export, product-ID cleanup, shared code). Not run by hand, but each can be: `python -m pipeline.<step> --help` |
+| root `folio_retry_failed.py`, `folio_delete_orders.py`, `folio_add_po_lines.py` | fix-up tools you run yourself when something goes wrong |
+| root `folio_cleanup_test_pos.py`, `folio_test_data.py` | for test tenants only |
+| `ebsconet_config.json`, `order_marc_headers.xlsx`, `template_profiles/` | settings, tag map, exported profile templates |
+
+The per-step sections below describe each step's behavior and options. Their commands use
+`python -m pipeline.<step>`; in normal use the `ebsconet.py` commands above run them.
+
 | Step | Script | Status |
 |---|---|---|
-| 1 Prep + split spreadsheet | `ebsconet_prep.py` | done |
-| 2 Build MARC files | `ebsconet_to_marc.py` | done |
-| 3a One-time -> ongoing orders | `folio_ongoing.py` | done (untested against a live tenant) |
-| 3b PO/POL export for EBSCONET | `folio_export_pols.py` | done (untested against a live tenant) |
-| 4 FOLIO profiles | `folio_setup.py` | done (dry run verified; not yet run live) |
+| 1 Prep + split spreadsheet | `pipeline/ebsconet_prep.py` | done |
+| 2 Build MARC files | `pipeline/ebsconet_to_marc.py` | done |
+| 3a One-time -> ongoing orders | `pipeline/folio_ongoing.py` | done (untested against a live tenant) |
+| 3b PO/POL export for EBSCONET | `pipeline/folio_export_pols.py` | done (untested against a live tenant) |
+| 4 FOLIO profiles | `pipeline/folio_setup.py` | done (dry run verified; not yet run live) |
 | - Test data on tenant | `folio_test_data.py` | run once on the bugfest tenant |
-| 5 Load a .mrc | `folio_import.py` | tested live (bugfest) |
-| - Remove empty product IDs | `folio_clean_product_ids.py` | tested live (bugfest); runs after each load |
+| 5 Load a .mrc | `pipeline/folio_import.py` | tested live (bugfest) |
+| - Remove empty product IDs | `pipeline/folio_clean_product_ids.py` | tested live (bugfest); runs after each load |
 | - Retry failed records | `folio_retry_failed.py` | tested live (bugfest) |
 | - Remove bad POs/lines | `folio_delete_orders.py` | tested live (PO and line delete) |
 
@@ -35,8 +54,8 @@ lives in `order_marc_headers.xlsx` (edit it in Excel).
 
 ## Steps 1-2: files for Data Import
 ```
-.venv/bin/python ebsconet_prep.py TestEBSCOnet_adjusted.xlsx --out out
-.venv/bin/python ebsconet_to_marc.py
+.venv/bin/python -m pipeline.ebsconet_prep TestEBSCOnet_adjusted.xlsx --out out
+.venv/bin/python -m pipeline.ebsconet_to_marc
 ```
 Outputs: `out/library-EBSCONET_*.xlsx`, `out/prep_report.txt`,
 `out/prep_exclusions.csv` (every removed row and why), and `out/marc/*.mrc|.mrk`.
@@ -58,10 +77,10 @@ Row rules (config `rules` and `package_title_keywords`): zero-cost rows are remo
 package members at $0 are removed; "Fee" and unrecognized formats are removed. Rows
 with no ISSN are **loaded** and listed in `out/prep_no_issn.csv` (see below).
 
-## Step 3a: convert POs to ongoing orders (`folio_ongoing.py`)
+## Step 3a: convert POs to ongoing orders (`pipeline/folio_ongoing.py`)
 ```
-.venv/bin/python folio_ongoing.py po_numbers.csv --ini my_tenant.ini             # dry run
-.venv/bin/python folio_ongoing.py po_numbers.csv --ini my_tenant.ini --live      # updates FOLIO
+.venv/bin/python -m pipeline.folio_ongoing po_numbers.csv --ini my_tenant.ini             # dry run
+.venv/bin/python -m pipeline.folio_ongoing po_numbers.csv --ini my_tenant.ini --live      # updates FOLIO
 ```
 - Input: the Orders app CSV export (a "PO number" column) or a plain list with one PO
   number per line. Duplicates are ignored.
@@ -88,26 +107,26 @@ with no ISSN are **loaded** and listed in `out/prep_no_issn.csv` (see below).
 If no line has an end date, no renewal date is set.
 
 The code that applies these is `build_ongoing()` and `renewal_date()` in
-`folio_ongoing.py`; the payload is the existing composite order with
+`pipeline/folio_ongoing.py`; the payload is the existing composite order with
 `orderType: "Ongoing"` and an `ongoing` block, sent with a PUT to
 `/orders/composite-orders/{id}`. If FOLIO rejects the payload, the first dry run/live
 run on one PO will show the error text in the log. Other ongoing fields
 (`reviewPeriod`, `reviewDate`, `notes`) are not set; add them in `build_ongoing()`.
 
-## Step 3b: PO/POL export (`folio_export_pols.py`)
+## Step 3b: PO/POL export (`pipeline/folio_export_pols.py`)
 ```
-.venv/bin/python folio_export_pols.py --prefix E50 --ini my_tenant.ini
-.venv/bin/python folio_export_pols.py --csv po_numbers.csv --ini my_tenant.ini
+.venv/bin/python -m pipeline.folio_export_pols --prefix E50 --ini my_tenant.ini
+.venv/bin/python -m pipeline.folio_export_pols --csv po_numbers.csv --ini my_tenant.ini
 ```
 Writes `out/pol_export.csv` (`--out` to change): PO number, POL number, title,
 subscription end, POL id and a `matches_po_plus_1` column. EBSCONET is told the POL is
 the PO number plus `-1`, so any line that is not `-1` (such as the second line of a
 two-line PO) is flagged `NO - line N` for you to handle by hand.
 
-## Step 4: accounts and Data Import profiles (`folio_setup.py`)
+## Step 4: accounts and Data Import profiles (`pipeline/folio_setup.py`)
 ```
-.venv/bin/python folio_setup.py --ini sunflower_bugfest.ini            # dry run
-.venv/bin/python folio_setup.py --ini sunflower_bugfest.ini --live     # writes to FOLIO
+.venv/bin/python -m pipeline.folio_setup --ini sunflower_bugfest.ini            # dry run
+.venv/bin/python -m pipeline.folio_setup --ini sunflower_bugfest.ini --live     # writes to FOLIO
 ```
 Does instruction steps 8-12: adds the SOP account numbers (from `out/*.xlsx`) to the
 `ebsconet` organization, then creates for Online / Print / P-E a field mapping profile,
@@ -140,7 +159,7 @@ Known limitations / things to verify on the first real import:
 - 264$a is used for the publisher (not 260$a).
 - Fund, expense class and access provider ARE accepted by code (proven on bugfest).
 
-Extra PO line fields (proven on bugfest): `ebsconet_prep.py` adds two columns that the
+Extra PO line fields (proven on bugfest): `pipeline/ebsconet_prep.py` adds two columns that the
 MARC carries as 980$d and 980$k. **Descriptor + Frequency** are joined (`"Site License;
 Monthly (8-14 issues)"`; empty values and "Not Applicable" are dropped, separator is
 `description_separator` in the config) and mapped to the PO line **Description**
@@ -153,9 +172,9 @@ values also stay in the MARC record.
 no expense class. Preflight does not require one, and only checks a class against the
 budget when the record has one. The fund still needs an Active budget.
 
-## Step 5: load a .mrc (`folio_import.py`)
+## Step 5: load a .mrc (`pipeline/folio_import.py`)
 ```
-.venv/bin/python folio_import.py out/marc/<file>.mrc --ini sunflower_bugfest.ini \
+.venv/bin/python -m pipeline.folio_import out/marc/<file>.mrc --ini sunflower_bugfest.ini \
     --job-profile "EBSCONET order migration - Online" --live
 ```
 Uploads the file through the Data Import API (S3 presigned upload when the tenant has
@@ -171,10 +190,10 @@ records with no PO or an empty PO and writes `out/retry/<file>_retry.mrc` plus, 
 POs, `out/retry/<file>_delete_empty.csv` (same format as `folio_delete_orders.py`; delete
 those first, fix the cause, then load the retry file).
 
-**Preflight check (`folio_preflight.py`)** runs automatically before every load and
+**Preflight check (`pipeline/folio_preflight.py`)** runs automatically before every load and
 stops it on any error (`--skip-preflight` overrides). It can also be run alone:
 ```
-.venv/bin/python folio_preflight.py out/marc/<file>.mrc --ini my_tenant.ini --route online \
+.venv/bin/python -m pipeline.folio_preflight out/marc/<file>.mrc --ini my_tenant.ini --route online \
     --job-profile "EBSCONET order migration - Online"
 ```
 It reads only; nothing is written. Findings are ERROR (the load would fail or discard
@@ -210,7 +229,7 @@ expense class and access provider are matched **by code**. The fund needs a **bu
 containing the expense class, or the PO line is discarded ("Budget expense class not
 found"): `folio_test_data.py` creates budgets (allocation 1,000,000) for the test funds.
 
-URLs: `ebsconet_prep.py` lowercases the scheme and host of the URL column (FOLIO
+URLs: `pipeline/ebsconet_prep.py` lowercases the scheme and host of the URL column (FOLIO
 rejects `HTTP://WWW.X.ORG` for the resource URL and discards the whole PO line); paths
 and query strings are left alone.
 
@@ -221,14 +240,14 @@ receipt Pending, SOP price on the physical side and 0 electronic.
 Empty product IDs: the import profile always builds two product-ID rows (ISSN and title
 number). A record missing either still gets the row, empty; FOLIO shows the empty row and
 refuses to save an edit of the line while it is there. A profile cannot skip a row (the
-MARC data alone cannot change that), so `folio_import.py` removes the empty rows
-automatically right after each load (`folio_clean_product_ids.py`; `--no-cleanup` to leave
+MARC data alone cannot change that), so `pipeline/folio_import.py` removes the empty rows
+automatically right after each load (`pipeline/folio_clean_product_ids.py`; `--no-cleanup` to leave
 them). A line ends up with only its real IDs: ISSN + title number, just one of them, or
 none (package rows). Nothing is invented to fill a row. The ID *type* is carried in the
-MARC as 990$j (only when a title number exists). `folio_ongoing.py` also drops empty
+MARC as 990$j (only when a title number exists). `pipeline/folio_ongoing.py` also drops empty
 entries as a safety net. Run the cleaner on its own for earlier loads:
 ```
-.venv/bin/python folio_clean_product_ids.py --csv po_numbers.csv --ini my_tenant.ini --live
+.venv/bin/python -m pipeline.folio_clean_product_ids --csv po_numbers.csv --ini my_tenant.ini --live
 ```
 
 `folio_setup.py --update-mappings --live` overwrites existing mapping profiles with the
@@ -278,8 +297,8 @@ tenant's lines-per-PO limit (`poLines-limit`) is checked first. Skips are explai
 the output and in `out/add_lines_log.csv` (`no-po`: load it normally; `limit`: raise the
 tenant setting first). New lines are numbered `<PO>-2`, `-3`... (FOLIO never reuses a
 deleted line number). Undo a line with `folio_delete_orders.py` (`POL,<po>-<n>`).
-The value mapping mirrors `folio_setup.py`; change both together. Note that
-`folio_export_pols.py` flags these extra lines (`NO - line N`) because EBSCONET is told
+The value mapping mirrors `pipeline/folio_setup.py`; change both together. Note that
+`pipeline/folio_export_pols.py` flags these extra lines (`NO - line N`) because EBSCONET is told
 POL = PO + `-1`.
 
 Tested on bugfest: PO `TMULTI01` got its second line (`TMULTI01-3`), with the right
@@ -300,12 +319,12 @@ profiles, accounts or the `test_ebsconet_*` finance / organization / location re
 Never point it at a production tenant.
 
 ## Tenant .ini files
-`folio_common.py` reads the same `key = value` format as the PHP client (`okapiUrl`,
+`pipeline/folio_common.py` reads the same `key = value` format as the PHP client (`okapiUrl`,
 `tenant_id`, `username`, `password`, `sslVerify`). These hold live credentials: keep
 them out of version control and out of this folder's shared copies.
 
 ## Data rules (current behavior)
-Which rows load is decided in `ebsconet_prep.py` from the `rules` in
+Which rows load is decided in `pipeline/ebsconet_prep.py` from the `rules` in
 `ebsconet_config.json`.
 
 **Every row is loaded; a row without an ISSN is logged, not skipped.** `rules.skip_missing_issn`

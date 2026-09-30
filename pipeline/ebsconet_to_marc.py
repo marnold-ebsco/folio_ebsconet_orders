@@ -13,7 +13,7 @@ from pathlib import Path
 from openpyxl import load_workbook
 from pymarc import Field, MARCReader, Record, Subfield
 
-from ebsconet_prep import blank, load_config
+from pipeline.ebsconet_prep import blank, load_config
 
 BLANK = (" ", " ")
 

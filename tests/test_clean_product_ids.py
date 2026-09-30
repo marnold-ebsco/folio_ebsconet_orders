@@ -3,7 +3,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import folio_clean_product_ids as cp  # noqa: E402
+from pipeline import folio_clean_product_ids as cp  # noqa: E402
 
 ISSN = {"productId": "1234-5678", "productIdType": "issn-id"}
 TN = {"productId": "PC1", "productIdType": "pub-id"}

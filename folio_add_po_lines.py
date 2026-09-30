@@ -22,7 +22,7 @@ from pathlib import Path
 
 from pymarc import MARCReader
 
-from folio_common import order_lines_limit
+from pipeline.folio_common import order_lines_limit
 
 STAMP = "T00:00:00.000+00:00"
 SUBFIELDS = {"o": "order", "c": "cost", "f": "fund", "e": "expense_class",
@@ -204,7 +204,7 @@ def main(argv=None):
     p.add_argument("--live", action="store_true", help="actually add the lines")
     p.add_argument("--log", default="out/add_lines_log.csv")
     args = p.parse_args(argv)
-    from folio_common import connect
+    from pipeline.folio_common import connect
     client = connect(args.ini)
     limit, where = order_lines_limit(client)
     print("tenant PO lines limit: %s (%s); %s" % (

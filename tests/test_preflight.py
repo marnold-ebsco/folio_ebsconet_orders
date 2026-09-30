@@ -7,8 +7,8 @@ from pymarc import Field, Record, Subfield
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-import folio_preflight as pf  # noqa: E402
-from ebsconet_prep import load_config  # noqa: E402
+from pipeline import folio_preflight as pf  # noqa: E402
+from pipeline.ebsconet_prep import load_config  # noqa: E402
 
 
 @pytest.fixture

@@ -8,7 +8,7 @@ import argparse
 import csv
 from pathlib import Path
 
-from folio_ongoing import read_po_numbers
+from pipeline.folio_ongoing import read_po_numbers
 
 
 def split_pol(pol_number):
@@ -63,7 +63,7 @@ def main(argv=None):
     p.add_argument("--out", default="out/pol_export.csv")
     args = p.parse_args(argv)
 
-    from folio_common import connect
+    from pipeline.folio_common import connect
     pos = read_po_numbers(args.csv) if args.csv else None
     rows = export_rows(fetch_lines(connect(args.ini), args.prefix, pos))
     write_csv(args.out, rows)

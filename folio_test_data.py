@@ -12,7 +12,7 @@ import argparse
 import json
 import uuid
 
-from folio_common import connect
+from pipeline.folio_common import connect
 
 PREFIX = "test_ebsconet_"
 FISCAL_YEAR_CODE = "FY2026"

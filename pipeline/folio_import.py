@@ -13,10 +13,10 @@ from pathlib import Path
 import httpx
 from pymarc import MARCReader
 
-from ebsconet_prep import load_config
-from folio_clean_product_ids import clean_lines
-from folio_common import connect
-from folio_preflight import route_from_profile, run_preflight
+from pipeline.ebsconet_prep import load_config
+from pipeline.folio_clean_product_ids import clean_lines
+from pipeline.folio_common import connect
+from pipeline.folio_preflight import route_from_profile, run_preflight
 
 DONE = {"COMMITTED", "ERROR", "CANCELLED", "DISCARDED"}
 

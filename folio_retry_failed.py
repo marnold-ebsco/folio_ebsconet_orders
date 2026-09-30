@@ -17,7 +17,7 @@ from pathlib import Path
 
 from pymarc import MARCReader
 
-from folio_import import po_numbers, po_results
+from pipeline.folio_import import po_numbers, po_results
 
 
 def classify(results):
@@ -58,7 +58,7 @@ def main(argv=None):
     p.add_argument("--ini", required=True)
     p.add_argument("--out-dir", default="out/retry")
     args = p.parse_args(argv)
-    from folio_common import connect
+    from pipeline.folio_common import connect
     results = po_results(connect(args.ini), po_numbers(args.mrc))
     ok, missing, empty = classify(results)
     print("%d records: %d loaded, %d missing, %d empty PO(s)"

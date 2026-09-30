@@ -13,9 +13,9 @@ Only run this against a TEST tenant.
 import argparse
 import glob
 
-from ebsconet_prep import load_config
+from pipeline.ebsconet_prep import load_config
 from folio_delete_orders import delete_po, write_log
-from folio_import import po_numbers
+from pipeline.folio_import import po_numbers
 
 
 def collect_numbers(mrc_paths, extra=()):
@@ -87,7 +87,7 @@ def main(argv=None):
     if len(numbers) > args.max:
         raise SystemExit("%d POs is more than --max %d" % (len(numbers), args.max))
 
-    from folio_common import connect
+    from pipeline.folio_common import connect
     client = connect(args.ini)
     code = load_config(args.config)["folio"]["vendor_org_code"]
     vendor = client.folio_get("/organizations/organizations", key="organizations",

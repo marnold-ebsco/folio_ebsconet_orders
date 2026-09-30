@@ -10,7 +10,7 @@ import csv
 import re
 from pathlib import Path
 
-from ebsconet_prep import load_config
+from pipeline.ebsconet_prep import load_config
 
 HEADER_NAMES = {"ponumber", "po"}
 
@@ -130,7 +130,7 @@ def main(argv=None):
                    help="actually update FOLIO (default is a dry run)")
     args = p.parse_args(argv)
 
-    from folio_common import connect
+    from pipeline.folio_common import connect
     settings = load_config(args.config)["ongoing"]
     pos = read_po_numbers(args.csv)
     print("%d PO numbers; %s" % (len(pos), "LIVE" if args.live else "dry run"))
