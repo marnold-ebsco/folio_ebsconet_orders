@@ -7,7 +7,7 @@
 
 Tag references follow order_marc_headers.xlsx: 990$o PO number, 990$c price, 990$s/$t
 subscription dates, 990$a account, 990$f fund, 990$e expense class, 990$v access
-provider, 990$i title number, 856$u URL, 264$a publisher.
+provider, 990$l location, 990$m material type, 990$i title number, 856$u URL, 264$a publisher.
 
 Without --live nothing is written to FOLIO; the profile JSON is still written to
 <out>/profiles/ for review. Existing profiles with the same name are left alone.
@@ -133,10 +133,10 @@ def build_mapping_profile(route, template, cfg, vendor_id, name_prefix=None):
         set_value(fields, POL + "cost.listUnitPrice", "990$c")
         set_value(fields, POL + "cost.quantityPhysical", q("1"))
         set_repeatable(fields, POL + "locations[]", [
-            {"locationId": q(fo["location"]), "quantityPhysical": q("1"),
+            {"locationId": "990$l", "quantityPhysical": q("1"),
              "quantityElectronic": q("1") if electronic else ""}])
         set_value(fields, POL + "physical.createInventory", q(fo["create_inventory"]))
-        set_value(fields, POL + "physical.materialType", q(fo["physical_material_type"]))
+        set_value(fields, POL + "physical.materialType", "990$m")
     if electronic:
         # in a P/E mix the single SOP price goes on the physical side
         set_value(fields, POL + "cost.listUnitPriceElectronic",

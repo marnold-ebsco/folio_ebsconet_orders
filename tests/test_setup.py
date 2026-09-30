@@ -110,9 +110,9 @@ def test_print_profile(cfg):
     assert f["order.poLine.receiptStatus"]["value"] == '"Pending"'
     assert f["order.poLine.cost.listUnitPrice"]["value"] == "990$c"
     assert f["order.poLine.cost.quantityPhysical"]["value"] == '"1"'
-    assert f["order.poLine.physical.materialType"]["value"] == '"journal"'
+    assert f["order.poLine.physical.materialType"]["value"] == "990$m"
     assert sub(f["order.poLine.locations[]"]) == [
-        {"locationId": '"test_ebsconet_location (TEST-EBSCONET-LOC)"',
+        {"locationId": "990$l",
          "quantityPhysical": '"1"', "quantityElectronic": ""}]
     assert f["order.poLine.eresource.accessProvider"]["value"] == ""
     assert f["order.poLine.eresource.activated"]["booleanFieldAction"] == "ALL_FALSE"

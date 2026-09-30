@@ -20,12 +20,12 @@ Two things to know up front:
 |---|---|---|
 | 1 | You / EBSCONET | The EBSCONET order spreadsheet (SOP) is obtained from your EBSCONET representative. |
 | 2 | You | **Before we start:** your FOLIO system is checked against the list in section 1 below, and the choices in section 3 are made. |
-| 3 | EBSCO | We prepare your copy of the spreadsheet: we remove the lines that cost nothing and add three empty columns for you to fill in. We send it to you. |
-| 4 | **You** | **You fill in the three columns on every line and send the file back** (section 2). |
+| 3 | EBSCO | We prepare your copy of the spreadsheet: we remove the lines that cost nothing, split the rest by format into up to **three spreadsheets** (electronic, physical, and print + electronic, "P/E"), and add empty columns for you to fill in. We send them to you. |
+| 4 | **You** | **You fill in the highlighted columns on every line of each spreadsheet and send them all back** (section 2). |
 | 5 | EBSCO | We check your codes against your FOLIO system. If anything is wrong (a mistyped code, a fund that does not exist) we send you the list, you correct it, and we check again. This repeats until the file is clean. |
 | 6 | EBSCO | We load the orders into FOLIO as Pending orders. |
 | 7 | You | You look over a sample of the orders in FOLIO and tell us they look right. |
-| 8 | EBSCO | We convert the orders to *ongoing* orders, if you want that (section 4). |
+| 8 | EBSCO | We convert to *ongoing* orders the ones you marked **Ongoing**, using the renewal interval you gave (section 4). |
 | 9 | EBSCO / you | We give EBSCONET the list of FOLIO order numbers so that your renewals can be matched to them. |
 
 ## 1. What must be ready in your FOLIO system
@@ -41,30 +41,51 @@ versions; your FOLIO administrator will know where to find them.
 - **Expense classes**, only if your library uses them.
 - **Organizations** for the publishers or platforms you want shown as the access provider,
   if you want that (optional, see section 3), each marked as a vendor.
-- For **print** subscriptions only: a **location** (for example your serials or periodicals
-  location) and a **material type** (for example "journal" or "serial").
+- For **physical (print) and P/E** subscriptions: the **locations** (for example your serials
+  or periodicals location) and **material types** (for example "journal" or "serial") you
+  will choose from on the spreadsheet.
 - **An account for us** to work with, with permission to create Data Import profiles, run
   imports, create and edit orders, and read the finance and organization settings. (Or
   your administrator can work with us on a screen share.)
 
-## 2. What you fill in: three columns, on every line
-In the spreadsheet we send you, three columns are highlighted. On each line please enter:
+## 2. What you fill in
+We send you **up to three spreadsheets**, one for each kind of subscription. If you have no
+subscriptions of a kind, you will not receive that file.
 
-| Column | What to enter | Where to find the code |
+| Spreadsheet | Contains | What you fill in |
 |---|---|---|
-| **FOLIO Fund** | The **code** of the fund that pays for this subscription | Finance app, list of funds |
-| **FOLIO Expense Class** | The **code** of the expense class, *only if your library uses them* | Settings, Finance, expense classes |
-| **FOLIO Org** | The **code** of the organization to show as the access provider (optional) | Organizations app |
+| **Electronic** | Online-only titles, databases, e-books | Fund, expense class, organization, **order type and renewal interval** |
+| **Physical** | Print-only titles | Fund, expense class, organization, **order type and renewal interval**, **location and material type** |
+| **P/E** | Print + online titles | Everything above: fund, expense class, organization, order type and renewal interval, location and material type |
 
-Please use the codes **exactly as they appear in FOLIO** (same spelling and capitals).
+In each spreadsheet the columns to fill in are **highlighted in light yellow**. On every line
+please enter:
+
+| Column | On which spreadsheet | What to enter | Where to find it |
+|---|---|---|---|
+| **FOLIO Fund** | all | The **code** of the fund that pays for this subscription | Finance app, list of funds |
+| **FOLIO Expense Class** | all | The **code** of the expense class, *only if your library uses them* | Settings, Finance, expense classes |
+| **FOLIO Org** | all | The **code** of the organization to show as the access provider (optional) | Organizations app |
+| **FOLIO Order Type** | all three | Click the cell and **choose Ongoing or One-Time from the list** that pops up. Nothing else is accepted. | (the list) |
+| **FOLIO Renewal Interval (Days)** | all three | **Only if the order is Ongoing:** how often it renews, in days (for example 365 for a yearly subscription). Whole numbers only. Leave blank for One-Time. | Your subscription terms |
+| **FOLIO Location** | physical, P/E | Where the print copy goes | Settings, Tenant, Locations (you may get a list to choose from) |
+| **FOLIO Material Type** | physical, P/E | The kind of item, for example "journal" | Settings, Inventory, Material types (you may get a list to choose from) |
+
+Please use the codes and names **exactly as they appear in FOLIO** (same spelling and capitals).
 Some guidance:
 - **Every order ends up with a fund.** Please fill it in on every line. A typical setup is one
   fund for online subscriptions and one for print, or funds by subject area. The choice is
   yours (section 3).
+- **Ongoing or One-Time?** Choose **Ongoing** for subscriptions that renew (most journals and
+  databases) and give the renewal interval in days. Choose **One-Time** for a one-off purchase
+  that will not renew; no interval is needed. The choice is made **order by order**, so one
+  file can mix both.
 - **A blank cell is allowed**: it simply gets a default that we agree with you in advance.
-  If you leave cells blank we tell you how many, and you can fill them in if the default is
-  not what you want.
-- **Please do not add, delete or reorder the other columns.**
+  For order type the default is Ongoing; for the interval it is 365 days; for location and
+  material type it is the ones agreed in section 3. If you leave cells blank we tell you how
+  many, and you can fill them in if the default is not what you want.
+- **Please do not add, delete or reorder the other columns**, and please send back
+  **all** of the spreadsheets we sent you.
 - If you are unsure how to charge a line, tell us and we will set it aside rather than guess.
 
 ## 3. Choices we need you to make
@@ -75,17 +96,18 @@ We set these once, at the start. Most have a sensible default, shown in brackets
 | **Funds** | One fund for everything, separate funds for print and online, or funds by subject? (Default: one fund for online and one for print.) |
 | **Expense classes** | Does your library use them? If so, which class for which kind of title or subject? (Default: not used unless you tell us.) |
 | **Access provider** | Do you want the publisher or platform shown as the access provider on each order? It is optional; the vendor on every order is EBSCONET regardless. (Default: a single organization, or left blank.) |
-| **Print subscriptions** | Which location and material type? Do you have any print subscriptions at all? |
+| **Print and P/E subscriptions** | Which locations and material types can you choose from on the spreadsheet? Which is the default for any line you leave blank? Do you have any print subscriptions at all? |
+| **Ongoing or One-Time** | Which default for a line you leave blank (Ongoing unless you say otherwise), and which default renewal interval (365 days)? |
 | **Inventory** | Should loading also create inventory records (so the e-journals appear in discovery)? If yes, the system matches on ISSN and creates records where there is no match. (Default: no, orders only.) |
 | **Receiving** | For print, should the order wait for receipt ("Pending")? For online, no receipt is expected. (Default as shown.) |
 | **Currency** | The currency of the prices in the spreadsheet. (Default: USD.) |
 | **Zero-dollar lines** | These are removed automatically (most are titles included free in a package). Tell us if you would rather keep any. |
 | **"Usage Loading Service" lines** | These look like service fees rather than titles. We can load them or leave them out. Which do you prefer? |
 
-## 4. Ongoing orders: what they are and why you might want them
+## 4. Ongoing orders: what they are and how you choose them
 Every order in FOLIO has two separate settings:
 - **Status**: Pending, Open or Closed. *We leave every order Pending.*
-- **Order type**: One-Time or Ongoing. *This is what the conversion changes.*
+- **Order type**: One-Time or Ongoing. *This is what you choose on the spreadsheet.*
 
 The import creates every order as **One-Time**. Your subscriptions renew every year, and an
 **Ongoing** order carries the renewal details that a One-Time order does not have: how often
@@ -94,18 +116,21 @@ Converting them means FOLIO knows when each subscription comes up for renewal, a
 the EBSCONET renewal integration expects. The conversion does not open the orders and does not
 touch your funds.
 
-It is optional. If you do not want it, the orders simply stay One-Time.
+**You decide for each order, on every spreadsheet.** In the *FOLIO Order
+Type* column pick **Ongoing** or **One-Time** from the pop-up list. For Ongoing orders, enter
+the renewal interval in days in *FOLIO Renewal Interval (Days)*. After loading we convert
+exactly the orders you marked Ongoing, using the interval you gave; One-Time orders stay
+One-Time. The physical spreadsheet has the same two columns; the interval is rarely needed
+there, but the choice is yours for print orders too.
 
-**What we need from you to set it up:**
-1. **Do you want the orders converted to Ongoing?** (Recommended if you will renew through
-   EBSCONET or manage renewals in FOLIO.)
-2. **Are your subscriptions annual?** We use a renewal interval of **365 days**. Some terms in
-   a spreadsheet can be different (a 15-month term, for example). Tell us if you have
-   multi-year or non-annual subscriptions, so we can handle them differently.
-3. **Which date should drive the renewal?** We default to the **latest end date** on the
+**What we still need from you:**
+1. **Are your subscriptions annual?** The default interval is **365 days**; you can give a
+   different number of days on any line (a 15-month term, for example), so multi-year or
+   non-annual subscriptions are handled line by line.
+2. **Which date should drive the renewal?** We default to the **latest end date** on the
    order's lines, so an order never comes up for renewal before its last line has ended. The
    alternatives are the earliest end date, or no renewal date at all.
-4. **Should renewals be manual or automatic in FOLIO?** (Default: not manual.)
+3. **Should renewals be manual or automatic in FOLIO?** (Default: not manual.)
 
 ## 5. What we do with lines that need special handling
 | Situation | What we do |
@@ -123,7 +148,7 @@ It is optional. If you do not want it, the orders simply stay One-Time.
 - Orders are **Pending**, with EBSCONET as the vendor, and show the fund, the price, the
   subscription dates, your account number, and (for online titles) the access provider and
   resource link.
-- If they were converted, the order type shows **Ongoing**.
+- The order type shows **Ongoing** or **One-Time** as you chose on the spreadsheet; print orders show the location and material type you chose.
 
 ## 7. What we will ask you to check
 After the load, please open a handful of orders (a mix of online and print, and a couple
@@ -135,15 +160,17 @@ expect. If something is wrong, we can remove and reload the affected orders.
 - [ ] EBSCONET organization exists in FOLIO; we can add account numbers to it
 - [ ] Funds and active budgets exist (with expense classes, if used)
 - [ ] Organizations for access providers exist, if wanted
-- [ ] Location and material type exist, if you have print subscriptions
+- [ ] Locations and material types exist, if you have print or P/E subscriptions
 - [ ] An account or screen-share time for us
 - [ ] Choices in section 3 answered, and the ongoing questions in section 4 answered
 
-**When we send the spreadsheet**
+**When we send the spreadsheets (electronic, physical, P/E)**
 - [ ] Fill in FOLIO Fund on every line
 - [ ] Fill in FOLIO Expense Class, if used
 - [ ] Fill in FOLIO Org, if wanted
-- [ ] Return the file, then correct anything on the list we send back
+- [ ] Every spreadsheet: choose Ongoing or One-Time from the list on every line; for Ongoing, enter the renewal interval in days
+- [ ] Physical and P/E: fill in FOLIO Location and FOLIO Material Type
+- [ ] Return **all** the spreadsheets, then correct anything on the list we send back
 
 **After loading**
 - [ ] Review a sample of orders in FOLIO
@@ -159,4 +186,8 @@ expect. If something is wrong, we can remove and reload the affected orders.
 | **Expense class** | An optional tag on the charge, such as "electronic" or "print" |
 | **Pending** | An order that has not been opened; nothing is committed against the fund |
 | **Ongoing order** | An order that renews on a schedule, with a renewal interval and date |
+| **One-Time order** | An order for a single purchase that does not renew |
+| **Renewal interval** | The number of days between renewals of an Ongoing order (365 for yearly) |
+| **P/E** | Print + electronic: a subscription that includes both formats |
+| **Location / material type** | Where a print copy is kept, and what kind of item it is |
 | **Access provider** | The publisher or platform that supplies an online title |

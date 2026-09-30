@@ -12,14 +12,17 @@ unless a command says `--live`.
  EBSCONET                    WE                                CUSTOMER
  --------                    --                                --------
  1. sends the SOP  ------->  2. ebsconet.py for-customer SOP
-                                (removes every $0 line, adds the
-                                 three columns to fill in)
-                             send  *_for_customer.xlsx  ----->  3. fills in FOLIO Org,
-                                                                   FOLIO Fund,
-                                                                   FOLIO Expense Class
-                                                                   on every line
-                             4. receive the filled-in file  <--
-                             5. ebsconet.py build FILLED.xlsx
+                                (removes every $0 line, splits by
+                                 format, adds the columns to fill in)
+                             send  the 3 *_for_customer_*.xlsx ->  3. fills in FOLIO Org,
+                                                                   Fund, Expense Class on
+                                                                   every line; Order Type
+                                                                   + Renewal Interval
+                                                                   (all three files);
+                                                                   Location + Material
+                                                                   Type (physical, P-E)
+                             4. receive the filled-in files  <--
+                             5. ebsconet.py build FILLED*.xlsx
                              6. ebsconet.py load --ini ...      (dry run = preflight)
                                 errors? send the list back  ->  fixes the cells, returns
                                                                 the file; repeat 5-6
@@ -34,8 +37,8 @@ One-time per tenant (before the first load): section A below, then
 ### The five commands
 | Command | When | What it does | Writes to FOLIO? |
 |---|---|---|---|
-| `ebsconet.py for-customer SOP.xlsx` | step 2 | Removes every zero-dollar line; adds the highlighted customer columns; logs what was removed | no |
-| `ebsconet.py build FILLED.xlsx` | step 5 | Applies the remaining rules, uses the customer's values, splits by format, builds the MARC files | no |
+| `ebsconet.py for-customer SOP.xlsx` | step 2 | Removes every zero-dollar line; splits the rest into an **electronic**, a **physical** and a **P-E** spreadsheet, each with its own highlighted customer columns; logs what was removed or not sent | no |
+| `ebsconet.py build FILLED*.xlsx` | step 5 | Takes the customer's filled-in files (all three, or one), applies the remaining rules, uses the customer's values, builds the MARC files and `order_settings.csv` | no |
 | `ebsconet.py setup --ini TENANT.ini` | once per tenant | Adds the SOP's account numbers to the vendor organization; creates the Online / Print / P-E Data Import profiles | only with `--live` |
 | `ebsconet.py load --ini TENANT.ini` | steps 6-7 | For each MARC file: preflight checks, then upload, import, verify, clean up empty product IDs, audit log | only with `--live` |
 | `ebsconet.py finish --ini TENANT.ini` | step 8 | Converts the loaded POs to ongoing orders; writes the PO / POL export for EBSCONET | ongoing conversion only with `--live` |
@@ -79,22 +82,45 @@ the ones you run separately, when something needs fixing.
 - [ ] Put the SOP .xlsx in the folder.
 - [ ] `.venv/bin/python ebsconet.py for-customer SOP.xlsx`
 - [ ] Read `out/customer/<name>_for_customer_report.txt`: lines read, **zero-dollar
-      lines removed**, lines left for the customer. The removed lines are listed in
-      `out/customer/<name>_zero_dollar_removed.csv`; skim them.
-- [ ] Send `out/customer/<name>_for_customer.xlsx` to the customer with the note below.
+      lines removed**, lines not sent, and the line count of each spreadsheet. The removed
+      lines are listed in `out/customer/<name>_zero_dollar_removed.csv`; skim them. Fee
+      lines and lines with an unrecognized format are not sent to the customer and are
+      listed in `out/customer/<name>_not_sent.csv`.
+- [ ] Send the customer the files in `out/customer/` (a type with no lines gets no file):
+      `<name>_for_customer_electronic.xlsx`, `..._physical.xlsx` and `..._P-E.xlsx`, with
+      the note below.
 
-> **Note to the customer:** please fill in the three highlighted columns on **every**
-> line. *FOLIO Org* = the code of the access-provider organization in FOLIO (optional
-> per the process; blank uses our default). *FOLIO Fund* = the code of the fund that pays
-> for the line. *FOLIO Expense Class* = the expense class code, if your library uses
-> them. Use the codes exactly as they appear in FOLIO. Do not add, delete or reorder
-> other columns.
+What the customer fills in on each file (highlighted light yellow):
+
+| Spreadsheet | FOLIO Org / Fund / Expense Class | FOLIO Order Type + FOLIO Renewal Interval (Days) | FOLIO Location + FOLIO Material Type |
+|---|---|---|---|
+| electronic (online only, database, e-book) | yes | yes | |
+| physical (print) | yes | yes (interval rarely used) | yes |
+| P-E (print + online) | yes | yes | yes |
+
+*FOLIO Order Type* is a **drop-down** that accepts only `Ongoing` or `One-Time`;
+*Renewal Interval* accepts only a whole number of days and is used only for Ongoing
+orders. *Location* and *Material Type* become drop-downs when `customer_choices` in
+`ebsconet_config.json` lists the tenant's values (otherwise free text, exactly as FOLIO
+names them: location as `Name (CODE)`, material type by name).
+(The SOP's own `Order Type` column is a different column and is not used.)
+
+> **Note to the customer:** please fill in the highlighted columns on **every** line of
+> each spreadsheet, and send all of them back. *FOLIO Org* = the code of the
+> access-provider organization in FOLIO (optional per the process; blank uses our
+> default). *FOLIO Fund* = the code of the fund that pays for the line. *FOLIO Expense
+> Class* = the expense class code, if your library uses them. *FOLIO Order Type* =
+> choose Ongoing or One-Time from the list; if Ongoing, enter the renewal interval in
+> days in *FOLIO Renewal Interval (Days)*. *FOLIO Location* and *FOLIO Material Type* =
+> where the print copy goes and what kind of item it is. Use the codes and names exactly
+> as they appear in FOLIO. Do not add, delete or reorder other columns.
 
 ### 3. The customer fills in the columns
 Nothing for us to do. A blank cell falls back to the defaults in the config.
 
-### 4-5. Receive the filled-in file and build
-- [ ] `.venv/bin/python ebsconet.py build FILLED.xlsx`
+### 4-5. Receive the filled-in files and build
+- [ ] `.venv/bin/python ebsconet.py build FILLED_electronic.xlsx FILLED_physical.xlsx FILLED_P-E.xlsx`
+      (list whichever files you have; with several, rows are reported as `<file>:<row>`)
 - [ ] Read `out/prep_report.txt`: rows loadable per route, exclusions, the "Removed rows
       with a non-zero cost" list (money that will not be loaded), and, for each customer
       column, how many cells were blank (default used). Blank cells are listed in
@@ -134,7 +160,7 @@ load it with `python -m pipeline.folio_import`; see the README).
 
 ### 8-9. Ongoing conversion and the EBSCONET hand-off
 
-**What this step does, and why.** Each order has two separate settings: its **status**
+**What this step does, and why.** (The customer now chooses, per order, whether it is Ongoing or One-Time and its renewal interval; `build` records the choices in `out/order_settings.csv` and `finish` follows them: One-Time orders are left alone, Ongoing orders get the customer's interval.) Each order has two separate settings: its **status**
 (Pending / Open / Closed) and its **order type** (One-Time / Ongoing). Data Import creates
 every order as **One-Time** and **Pending**. The `finish` step changes only the *type*, to
 **Ongoing**, and never the status: the orders stay **Pending** (nothing is encumbered, and
@@ -189,8 +215,9 @@ files together (or use a separate `--out` folder per SOP, e.g. `--out out/2026-s
 ## Files produced (in `out/`)
 | File | Made by | What it is |
 |---|---|---|
-| `customer/<name>_for_customer.xlsx` | for-customer | Send to the customer |
-| `customer/<name>_zero_dollar_removed.csv`, `..._report.txt` | for-customer | What was removed and why |
+| `customer/<name>_for_customer_electronic / _physical / _P-E.xlsx` | for-customer | Send to the customer (one per type that has lines) |
+| `customer/<name>_zero_dollar_removed.csv`, `..._not_sent.csv`, `..._report.txt` | for-customer | What was removed, what was not sent (Fee / unrecognized format) and why |
+| `order_settings.csv` | build | Each order: Ongoing or One-Time, and its renewal interval; read by `finish` |
 | `library-EBSCONET_online / -print / _P-E.xlsx` | build | The filled-in lines split by format |
 | `prep_report.txt`, `prep_exclusions.csv`, `prep_no_issn.csv`, `prep_defaults_used.csv` | build | What was excluded, loaded without an ISSN, or given a default |
 | `marc/*.mrc`, `marc/*.mrk` | build | Files for Data Import, and readable text copies |

@@ -17,8 +17,9 @@ Not in the repo (git-ignored): filled-in `*.ini` files, the SOP spreadsheets, `o
 
 ## How it is organized
 **One command drives the workflow: `ebsconet.py`.** Its steps, in order:
-`for-customer SOP.xlsx` (drop the $0 lines, add the columns the customer fills in) ->
-`build FILLED.xlsx` (process the filled-in file, make the MARC files) -> `setup` (once per
+`for-customer SOP.xlsx` (drop the $0 lines, split into electronic / physical / P-E
+spreadsheets, add the columns the customer fills in) ->
+`build FILLED*.xlsx` (process the filled-in files, make the MARC files) -> `setup` (once per
 tenant) -> `load` (preflight and load every MARC file) -> `finish` (ongoing conversion and
 the PO / POL export). See `RUNBOOK.md` for the workflow step by step, including what
 goes to the customer.
@@ -59,24 +60,47 @@ lives in `order_marc_headers.xlsx` (edit it in Excel).
 
 ## Steps 1-2: files for Data Import
 ```
-.venv/bin/python -m pipeline.ebsconet_prep TestEBSCOnet_adjusted.xlsx --out out
+.venv/bin/python -m pipeline.ebsconet_prep TestEBSCOnet.xlsx --out out
 .venv/bin/python -m pipeline.ebsconet_to_marc
 ```
 Outputs: `out/library-EBSCONET_*.xlsx`, `out/prep_report.txt`,
 `out/prep_exclusions.csv` (every removed row and why), and `out/marc/*.mrc|.mrk`.
 An empty split (for example print, when every print row is $0) produces no MARC file.
 
-**Customer columns (instruction steps 2-3).** The customer adds three columns to the SOP and
-fills them in **line by line**: `FOLIO Org` (access provider organization code),
-`FOLIO Fund` (fund code) and `FOLIO Expense Class` (expense class code, if used). Prep
-uses those values as they are. Only a blank cell, or a SOP without that column, falls back
-to the config defaults (`fund_by_route`, `expense_class_by_subject` / `default_expense_class`,
-`org_by_publisher` / `default_org`). If the columns are already in the SOP they are used in
-place, never duplicated. The fallbacks are reported in `out/prep_report.txt` and listed
-row by row in `out/prep_defaults_used.csv`, so you can ask the customer to fill the gaps.
-Wrong codes (typos, codes not on the tenant) are caught by the preflight check before a
-load. The test SOP has these columns filled with test values (two funds, three classes,
-three organizations, a few lines left blank on purpose).
+**Customer columns (instruction steps 2-3).** `for-customer` splits the SOP by
+format into three spreadsheets and adds the columns the customer fills in **line by
+line** (which columns go on which file is `customer_columns` in
+`pipeline/pipeline_config.json`):
+
+| Spreadsheet | Columns |
+|---|---|
+| electronic (`online`) | `FOLIO Org`, `FOLIO Fund`, `FOLIO Expense Class`, `FOLIO Order Type`, `FOLIO Renewal Interval (Days)` |
+| physical (`print`) | `FOLIO Org`, `FOLIO Fund`, `FOLIO Expense Class`, `FOLIO Order Type`, `FOLIO Renewal Interval (Days)`, `FOLIO Location`, `FOLIO Material Type` |
+| P-E (`pe`) | the same seven columns as physical |
+
+`FOLIO Order Type` is an Excel drop-down limited to `Ongoing` / `One-Time`
+(`order_type_choices`); `FOLIO Renewal Interval (Days)` accepts only whole numbers above
+0 and is used only when the order type is Ongoing. `FOLIO Location` and
+`FOLIO Material Type` are drop-downs when `customer_choices` in `ebsconet_config.json`
+lists values, otherwise free text. (The SOP's own `Order Type` column is a different,
+ignored column.) `build` accepts the three returned files together
+(`build a.xlsx b.xlsx c.xlsx`). Prep uses the customer's values as they are. A blank cell,
+or a SOP without that column, falls back to the config defaults (`fund_by_route`,
+`expense_class_by_subject` / `default_expense_class`, `org_by_publisher` / `default_org`,
+`ongoing.default_order_type` / `ongoing.interval_days`, and `folio.location` /
+`folio.physical_material_type`). A wrong order type or a non-numeric interval is
+replaced by the default with a warning in `out/prep_report.txt`; a One-Time order has no
+interval. If a column is already in the SOP it is used in place, never duplicated. The
+fallbacks are listed row by row in `out/prep_defaults_used.csv`.
+
+How the new columns flow on: Location and Material Type go into MARC `990$l` and `990$m`
+and the Data Import mapping profile reads them per record (re-run
+`ebsconet.py setup --update-mappings` on a tenant whose profiles were made before this
+change); the preflight checks every location and material type actually used. Order Type
+and interval go into `out/order_settings.csv`, which `finish` reads: One-Time orders stay
+One-Time, Ongoing orders are converted with the customer's interval (electronic and P-E
+on every spreadsheet; the interval is rarely needed on physical orders). Wrong
+codes (typos, codes not on the tenant) are caught by the preflight check before a load.
 
 Row rules (config `rules` and `package_title_keywords`): zero-cost rows are removed;
 package members at $0 are removed; "Fee" and unrecognized formats are removed. Rows

@@ -37,6 +37,19 @@ def read_po_numbers(path):
     return out
 
 
+def read_order_settings(path):
+    """{PO number: (order type, interval days or None)} from the order_settings.csv that
+    `build` writes: the customer's Ongoing / One-Time choice for each electronic and
+    P-E order."""
+    out = {}
+    with open(path, newline="", encoding="utf-8-sig") as fh:
+        for row in csv.DictReader(fh):
+            days = (row.get("interval_days") or "").strip()
+            out[row["order_number"].strip()] = (row["order_type"].strip(),
+                                                int(days) if days else None)
+    return out
+
+
 def renewal_date(order, source):
     """Renewal date taken from the lines' subscription end dates (or None)."""
     if source == "none":
@@ -76,11 +89,17 @@ def drop_empty_product_ids(line):
     return line
 
 
-def convert_po(client, po_number, settings, live):
-    """Convert one PO. Returns (status, note); status is converted / dry-run /
-    skipped / not-found / error."""
+def convert_po(client, po_number, settings, live, choice=None):
+    """Convert one PO. `choice` is the customer's (order type, interval days); a
+    One-Time choice leaves the PO alone and an interval replaces the default one.
+    Returns (status, note); status is converted / dry-run / skipped / not-found / error."""
     if '"' in po_number:
         return "error", "invalid PO number"
+    if choice:
+        if choice[0] == "One-Time":
+            return "skipped", "One-Time (customer's choice)"
+        if choice[1]:
+            settings = dict(settings, interval_days=choice[1])
     found = client.folio_get("/orders/composite-orders", key="purchaseOrders",
                              query='poNumber=="%s"' % po_number)
     if not found:
@@ -101,11 +120,14 @@ def convert_po(client, po_number, settings, live):
     return "converted", note
 
 
-def convert_all(client, po_numbers, settings, live):
+def convert_all(client, po_numbers, settings, live, choices=None):
+    """`choices` is {PO number: (order type, interval)}; POs without one (for example
+    orders loaded before the choice existed) are converted with the defaults in `settings`."""
     results = []
     for po in po_numbers:
         try:
-            status, note = convert_po(client, po, settings, live)
+            status, note = convert_po(client, po, settings, live,
+                                      (choices or {}).get(po))
         except Exception as exc:  # keep going; the log shows which POs failed
             status, note = "error", "%s: %s" % (type(exc).__name__, exc)
         results.append((po, status, note))

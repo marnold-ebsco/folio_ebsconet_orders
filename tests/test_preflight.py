@@ -21,7 +21,7 @@ def rec(**over):
          "url": "https://x.org/a", "order": "U1", "cost": "10.00", "fund": "F1",
          "expense_class": "GEN", "account": "ACC1", "start": "2026-01-01",
          "end": "2026-12-31", "org": "EBSCO", "title_number": "P1",
-         "title_number_type": ""}
+         "title_number_type": "", "location": "", "material_type": ""}
     d.update(over)
     return d
 

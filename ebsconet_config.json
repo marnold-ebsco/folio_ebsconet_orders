@@ -9,10 +9,16 @@
     "exempt_costed_packages_from_issn_skip": true
   },
   "ongoing": {
+    "default_order_type": "Ongoing",
     "interval_days": 365,
     "is_subscription": true,
     "manual_renewal": false,
     "renewal_date_source": "latest_subscription_to"
+  },
+  "customer_choices": {
+    "_comment": "Optional drop-down lists for the customer columns. Leave a list empty for free text.",
+    "location": ["test_ebsconet_location (TEST-EBSCONET-LOC)"],
+    "material_type": ["journal"]
   },
   "fund_by_route": {
     "online": "TEST-ELEC",

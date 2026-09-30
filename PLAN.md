@@ -73,7 +73,7 @@ the fix-up tools (retry, delete, add lines) and test-tenant tools stay in the ro
   (inverted) -> cancellation restriction. **Expense classes are optional**
   (`rules.use_expense_classes`).
 - **Independent receiving** = `checkinItems: true`; create-inventory = None.
-- Anonymized test spreadsheet (`TestEBSCOnet_adjusted.xlsx`, not in the repo).
+- Anonymized test spreadsheet (`TestEBSCOnet.xlsx`, not in the repo).
 
 ## Verified live (bugfest tenant, 2026-09-30)
 Online imports (2, then 25, then 82 records: all 107 POs created with lines), P-E import
