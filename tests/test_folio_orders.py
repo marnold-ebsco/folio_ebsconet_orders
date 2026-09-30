@@ -159,3 +159,35 @@ def test_read_ini_and_ssl(tmp_path):
     assert folio_common.ssl_setting(v["sslVerify"]) is False
     assert folio_common.ssl_setting(None) is True
     assert folio_common.ssl_setting("missing/ca.pem") is True
+
+
+class ConfigClient:
+    def __init__(self, entries, fail=False):
+        self.entries, self.fail, self.queries = entries, fail, []
+
+    def folio_get(self, path, key=None, query_params=None, **kw):
+        if self.fail:
+            raise RuntimeError("boom")
+        name = query_params["query"].split("configName==")[1].rstrip(")")
+        self.queries.append(name)
+        return {"configs": [{"value": v} for n, v in self.entries if n == name]}
+
+
+def test_order_lines_limit_reads_either_setting_name():
+    assert folio_common.order_lines_limit(ConfigClient([("poLines-limit", "11")])) == (
+        11, "poLines-limit")
+    assert folio_common.order_lines_limit(ConfigClient([("order_lines_limit", " 3 ")])) == (
+        3, "order_lines_limit")
+
+
+def test_order_lines_limit_prefers_first_name_and_defaults_to_one():
+    both = ConfigClient([("order_lines_limit", "5"), ("poLines-limit", "7")])
+    assert folio_common.order_lines_limit(both) == (7, "poLines-limit")
+    limit, where = folio_common.order_lines_limit(ConfigClient([]))
+    assert limit == 1 and "default" in where
+    assert folio_common.order_lines_limit(ConfigClient([("poLines-limit", "abc")]))[0] == 1
+
+
+def test_order_lines_limit_unreadable_is_none_not_an_error():
+    limit, where = folio_common.order_lines_limit(ConfigClient([], fail=True))
+    assert limit is None and "could not read" in where

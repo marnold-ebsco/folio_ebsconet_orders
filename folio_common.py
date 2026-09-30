@@ -41,3 +41,29 @@ def connect(ini_path):
         raise ValueError("%s is missing: %s" % (ini_path, ", ".join(missing)))
     return FolioClient(ini["okapiUrl"], ini["tenant_id"], ini["username"],
                        ini["password"], ssl_verify=ssl_setting(ini.get("sslVerify")))
+
+
+# The orders "purchase order lines limit" setting (how many lines one PO may hold) lives
+# in the ORDERS module configuration. Bugfest names it poLines-limit; other
+# environments use order_lines_limit, so both are tried. FOLIO's default is 1.
+LINES_LIMIT_NAMES = ("poLines-limit", "order_lines_limit")
+DEFAULT_LINES_LIMIT = 1
+
+
+def order_lines_limit(client, names=LINES_LIMIT_NAMES):
+    """Return (limit, where) for the tenant's PO-lines-per-PO limit.
+
+    `limit` is an int, or None when the setting could not be read; `where` says which
+    setting name supplied it (or that the default applies)."""
+    try:
+        for name in names:
+            found = client.folio_get("/configurations/entries", query_params={
+                "query": "(module==ORDERS and configName==%s)" % name, "limit": 5})
+            for entry in (found or {}).get("configs", []):
+                try:
+                    return int(str(entry.get("value")).strip()), name
+                except ValueError:
+                    continue
+    except Exception as exc:  # the setting is advisory; never block on it
+        return None, "could not read the setting (%s)" % type(exc).__name__
+    return DEFAULT_LINES_LIMIT, "no setting found; FOLIO default"

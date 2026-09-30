@@ -17,6 +17,7 @@ from datetime import datetime
 from pymarc import MARCReader
 
 from ebsconet_prep import load_config
+from folio_common import order_lines_limit
 from folio_setup import ROUTE_LABEL
 
 ERROR, WARN = "ERROR", "WARN"
@@ -323,6 +324,9 @@ def run_preflight(client, mrc, route, cfg, job_profile=None, out=print):
     """Full preflight. Returns True when there are no errors."""
     recs = read_records(mrc)
     out("preflight: %d records, route %s" % (len(recs), route))
+    limit, where = order_lines_limit(client)
+    out("tenant PO lines limit: %s (%s); Data Import adds one line per PO"
+        % ("unknown" if limit is None else limit, where))
     return report(check_records(recs, route) + check_tenant(client, recs, route, cfg,
                                                             job_profile))
 
