@@ -27,8 +27,26 @@
     "title_number": "Title Number",
     "title_number_type": "Title Number Type",
     "cancellation_restriction": "Cancellation Restriction",
-    "po_line_description": "PO Line Description"
+    "po_line_description": "PO Line Description",
+    "order_type": "FOLIO Order Type",
+    "renewal_interval": "FOLIO Renewal Interval (Days)",
+    "location": "FOLIO Location",
+    "material_type": "FOLIO Material Type"
   },
+  "customer_columns": {
+    "_comment": "Columns the customer fills in, per spreadsheet. Keys of added_columns.",
+    "online": ["org", "fund", "expense_class", "order_type", "renewal_interval"],
+    "print": ["org", "fund", "expense_class", "order_type", "renewal_interval",
+              "location", "material_type"],
+    "pe": ["org", "fund", "expense_class", "order_type", "renewal_interval",
+           "location", "material_type"]
+  },
+  "customer_file_labels": {
+    "online": "electronic",
+    "print": "physical",
+    "pe": "P-E"
+  },
+  "order_type_choices": ["Ongoing", "One-Time"],
   "usage_loading_service_prefix": "Usage Loading Service",
   "description_separator": "; ",
   "generated_id": {
@@ -43,7 +61,9 @@
     "Title Number": "990$i",
     "Title Number Type": "990$j",
     "Cancellation Restriction": "980$k",
-    "PO Line Description": "980$d"
+    "PO Line Description": "980$d",
+    "FOLIO Location": "990$l",
+    "FOLIO Material Type": "990$m"
   },
   "marc_indicators": {
     "245": [

@@ -1,9 +1,11 @@
 """EBSCONET SOP -> FOLIO orders: one command with a step per stage of the workflow.
 
-  for-customer SOP.xlsx   stage 1: drop zero-dollar lines, add the columns the customer
-                          fills in -> out/customer/<name>_for_customer.xlsx (send this)
-  build FILLED.xlsx       stage 2: process the filled-in spreadsheet and build the MARC
-                          files (out/library-EBSCONET_*.xlsx and out/marc/*.mrc)
+  for-customer SOP.xlsx   stage 1: drop zero-dollar lines, split by format and add the
+                          columns the customer fills in -> three spreadsheets in
+                          out/customer/ (electronic, physical, P-E); send these
+  build FILLED.xlsx ...   stage 2: process the filled-in spreadsheets (one, or all
+                          three) and build the MARC files (out/library-EBSCONET_*.xlsx
+                          and out/marc/*.mrc)
   setup                   once per tenant: vendor accounts and Data Import profiles
   load                    preflight + load every MARC file with the right job profile
   finish                  convert the loaded POs to ongoing orders and export the
@@ -34,10 +36,12 @@ def marc_files(out, cfg):
 
 def cmd_for_customer(args, cfg):
     s = prepare_for_customer(args.input, args.out, cfg)
-    print("%d lines read; %d zero-dollar lines removed; %d lines for the customer"
-          % (s["read"], s["removed"], s["kept"]))
-    print("customer fills in:", ", ".join(s["columns"]))
-    print("send:", s["file"])
+    print("%d lines read; %d zero-dollar lines removed; %d lines not sent (Fee or "
+          "unrecognized format); %d lines for the customer"
+          % (s["read"], s["removed"], s["unrouted"], s["kept"]))
+    for route, path in s["files"].items():
+        print("send: %s (%d lines; customer fills in: %s)" % (
+            path, s["counts"][route], ", ".join(s["columns"][route])))
     return 0
 
 
@@ -111,7 +115,11 @@ def cmd_finish(args, cfg):
     client = connect(args.ini)
     print("%d PO numbers; ongoing conversion: %s" % (
         len(numbers), "LIVE" if args.live else "dry run"))
-    results = folio_ongoing.convert_all(client, numbers, cfg["ongoing"], args.live)
+    settings_file = Path(args.out) / "order_settings.csv"
+    choices = (folio_ongoing.read_order_settings(settings_file)
+               if settings_file.exists() else {})
+    results = folio_ongoing.convert_all(client, numbers, cfg["ongoing"], args.live,
+                                        choices)
     log = Path(args.out) / "ongoing_log.csv"
     folio_ongoing.write_log(log, results)
     counts = {}
@@ -139,7 +147,8 @@ def build_parser():
     s.set_defaults(func=cmd_for_customer)
 
     s = sub.add_parser("build", help="stage 2: process the filled-in spreadsheet")
-    s.add_argument("input", help="the spreadsheet the customer sent back")
+    s.add_argument("input", nargs="+", help="the spreadsheet(s) the customer sent back "
+                   "(electronic, physical and P-E)")
     s.set_defaults(func=cmd_build)
 
     for name, func, text in (("setup", cmd_setup, "once per tenant: accounts and profiles"),

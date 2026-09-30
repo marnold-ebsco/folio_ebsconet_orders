@@ -48,7 +48,8 @@ def settings():
 
 
 def test_defaults_documented_values(settings):
-    assert settings == {"interval_days": 365, "is_subscription": True,
+    assert settings == {"default_order_type": "Ongoing",
+                        "interval_days": 365, "is_subscription": True,
                         "manual_renewal": False,
                         "renewal_date_source": "latest_subscription_to"}
 
@@ -191,3 +192,24 @@ def test_order_lines_limit_prefers_first_name_and_defaults_to_one():
 def test_order_lines_limit_unreadable_is_none_not_an_error():
     limit, where = folio_common.order_lines_limit(ConfigClient([], fail=True))
     assert limit is None and "could not read" in where
+
+
+def test_convert_po_one_time_choice_leaves_the_po_alone(settings):
+    c = FakeClient({"U1": order()})
+    assert ong.convert_po(c, "U1", settings, live=True, choice=("One-Time", None))[0] \
+        == "skipped"
+    assert not c.puts
+
+
+def test_convert_po_uses_the_customers_interval(settings):
+    c = FakeClient({"U1": order()})
+    assert ong.convert_po(c, "U1", settings, live=True, choice=("Ongoing", 180))[0] \
+        == "converted"
+    assert c.puts[0][1]["ongoing"]["interval"] == 180
+
+
+def test_read_order_settings(tmp_path):
+    f = tmp_path / "order_settings.csv"
+    f.write_text("order_number,route,order_type,interval_days\n"
+                 "U1,online,Ongoing,90\nU2,pe,One-Time,\n", encoding="utf-8")
+    assert ong.read_order_settings(f) == {"U1": ("Ongoing", 90), "U2": ("One-Time", None)}

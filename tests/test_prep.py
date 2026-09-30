@@ -228,10 +228,12 @@ def test_prepare_end_to_end(cfg, tmp_path):
     out = load_workbook(tmp_path / "out" / cfg["output_names"]["online"])
     ws = out.active
     assert ws.max_row == 4
-    assert ws["A1"].fill.start_color.rgb.endswith("FFFF00")   # mapped column
-    assert ws["A3"].fill.start_color.rgb.endswith("FFFF00")   # last data row too
-    assert ws["B1"].fill.fill_type is None                     # unmapped column
-    assert ws["B3"].fill.fill_type is None
+    names = [c.value for c in ws[1]]
+    col = names.index("FOLIO Fund") + 1                        # an added column
+    assert ws.cell(row=1, column=col).fill.start_color.rgb.endswith("FFFFCC")
+    assert ws.cell(row=3, column=col).fill.start_color.rgb.endswith("FFFFCC")
+    assert ws["A1"].fill.fill_type is None                     # SOP columns: no fill
+    assert ws["A3"].fill.fill_type is None
     assert (tmp_path / "out" / "prep_report.txt").exists()
     assert (tmp_path / "out" / "prep_exclusions.csv").exists()
 

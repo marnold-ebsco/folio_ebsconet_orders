@@ -26,7 +26,7 @@ PO_OK = re.compile(r"^[A-Za-z0-9]{1,22}$")
 ISSN_OK = re.compile(r"^\d{4}-\d{3}[\dXx]$")
 SUBFIELDS = {"o": "order", "c": "cost", "f": "fund", "e": "expense_class",
              "a": "account", "s": "start", "t": "end", "v": "org", "i": "title_number",
-             "j": "title_number_type"}
+             "j": "title_number_type", "l": "location", "m": "material_type"}
 
 
 def read_records(mrc_path):
@@ -165,16 +165,18 @@ def check_tenant(client, recs, route, cfg, job_profile=None):
                                "vendor" % code))
 
     if route in ("print", "pe"):
-        loc_code = code_in_parentheses(fo["location"])
-        loc = one(client, "/locations", "locations", "code==%s" % q(loc_code))
-        if not loc:
-            issues.append((ERROR, "tenant", "location %r not found" % loc_code))
-        elif not loc[0].get("isActive", True):
-            issues.append((ERROR, "tenant", "location %r is inactive" % loc_code))
-        if not one(client, "/material-types", "mtypes",
-                   "name==%s" % q(fo["physical_material_type"])):
-            issues.append((ERROR, "tenant", "material type %r not found"
-                           % fo["physical_material_type"]))
+        for value in sorted({r["location"] or fo["location"] for r in recs}):
+            loc_code = code_in_parentheses(value)
+            loc = one(client, "/locations", "locations", "code==%s" % q(loc_code))
+            if not loc:
+                issues.append((ERROR, "tenant", "location %r not found (990$l)" % value))
+            elif not loc[0].get("isActive", True):
+                issues.append((ERROR, "tenant", "location %r is inactive" % value))
+        for value in sorted({r["material_type"] or fo["physical_material_type"]
+                             for r in recs}):
+            if not one(client, "/material-types", "mtypes", "name==%s" % q(value)):
+                issues.append((ERROR, "tenant", "material type %r not found (990$m)"
+                               % value))
 
     if not one(client, "/orders/acquisition-methods", "acquisitionMethods",
                "value==%s" % q(fo["acquisition_method"])):

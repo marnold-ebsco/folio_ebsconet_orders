@@ -1,7 +1,7 @@
 """Prepare an EBSCONET SOP spreadsheet for FOLIO order migration.
 
 Covers instruction steps 2-7: add FOLIO fund / expense class / org columns, flag and
-exclude rows that should not load, convert dates to ISO, highlight the mapped
+exclude rows that should not load, convert dates to ISO, highlight the added
 columns and split the remainder into online / print / print+electronic workbooks.
 """
 import argparse
@@ -15,8 +15,9 @@ from pathlib import Path
 
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import PatternFill
+from openpyxl.worksheet.datavalidation import DataValidation
 
-HIGHLIGHT = PatternFill("solid", start_color="FFFF00", end_color="FFFF00")
+HIGHLIGHT = PatternFill("solid", start_color="FFFFCC", end_color="FFFFCC")
 ROUTES = ("online", "print", "pe")
 
 
@@ -58,6 +59,22 @@ def read_sop(path):
         row["_row"] = n
         rows.append(row)
     wb.close()
+    return headers, rows
+
+
+def read_sops(paths):
+    """Read one or more spreadsheets (the electronic / physical / P-E files the customer
+    sends back) as one. Headers are the union in first-seen order. With a single file
+    `_row` is the sheet row number; with several it is "<file name>:<row>"."""
+    paths = [paths] if isinstance(paths, (str, Path)) else list(paths)
+    headers, rows = [], []
+    for path in paths:
+        h, r = read_sop(path)
+        headers += [name for name in h if name not in headers]
+        if len(paths) > 1:
+            for row in r:
+                row["_row"] = "%s:%s" % (Path(path).stem, row["_row"])
+        rows += r
     return headers, rows
 
 
@@ -120,6 +137,56 @@ def line_description(descriptor, frequency, separator):
     parts = [str(v).strip() for v in (descriptor, frequency)
              if not blank(v) and str(v).strip().lower() != "not applicable"]
     return separator.join(parts)
+
+
+def customer_fields(route, cfg):
+    """Names of the columns the customer fills in on the spreadsheet for `route`."""
+    a = cfg["added_columns"]
+    use_classes = cfg["rules"].get("use_expense_classes", True)
+    return [a[key] for key in cfg["customer_columns"][route]
+            if use_classes or key != "expense_class"]
+
+
+def choice(value, choices):
+    """The entry of `choices` that `value` matches ignoring case, spaces and hyphens
+    ("one time" -> "One-Time"); None when it matches none."""
+    def key(text):
+        return re.sub(r"[^a-z0-9]", "", str(text).lower())
+    for option in choices:
+        if key(option) == key(value):
+            return option
+    return None
+
+
+def order_settings(row, cfg):
+    """(order type, interval in days or "", warnings) from the customer's columns on a
+    spreadsheet line. A blank or unrecognised order type gets the configured
+    default; a blank or bad interval on an Ongoing order gets the default interval;
+    a One-Time order carries no interval."""
+    a, ong = cfg["added_columns"], cfg["ongoing"]
+    where = "row %s" % row["_row"]
+    warnings = []
+    given = customer_value(row, a["order_type"])
+    order_type = choice(given, cfg["order_type_choices"]) if given else None
+    if given and order_type is None:
+        warnings.append("%s: %s '%s' is not one of %s; used %s" % (
+            where, a["order_type"], given, " / ".join(cfg["order_type_choices"]),
+            ong["default_order_type"]))
+    order_type = order_type or ong["default_order_type"]
+    if order_type == "One-Time":
+        return order_type, "", warnings
+    text = customer_value(row, a["renewal_interval"])
+    try:
+        days = int(float(text)) if text else 0
+    except ValueError:
+        days = 0
+    if days <= 0:
+        if text:
+            warnings.append("%s: %s '%s' is not a positive whole number of days; "
+                            "used %d" % (where, a["renewal_interval"], text,
+                                         ong["interval_days"]))
+        days = ong["interval_days"]
+    return order_type, days, warnings
 
 
 def to_cost(value):
@@ -221,6 +288,14 @@ def enrich(row, route, cfg):
         if cfg["rules"].get("use_expense_classes", True) else "")
     out[a["org"]] = customer_value(row, a["org"]) or cfg["org_by_publisher"].get(
         str(row.get(c["publisher"]) or "").strip(), cfg["default_org"])
+    out[a["order_type"]], out[a["renewal_interval"]] = "", ""
+    out[a["order_type"]], out[a["renewal_interval"]], more = order_settings(row, cfg)
+    warnings += more
+    out[a["location"]] = out[a["material_type"]] = ""
+    if route in ("print", "pe"):
+        out[a["location"]] = customer_value(row, a["location"]) or cfg["folio"]["location"]
+        out[a["material_type"]] = (customer_value(row, a["material_type"])
+                                   or cfg["folio"]["physical_material_type"])
     out[a["package_flag"]] = "Yes" if is_package(row, cfg) else "No"
     tn = row.get(c["title_number_source"])
     out[a["title_number"]] = "" if blank(tn) else str(tn).strip()
@@ -238,13 +313,20 @@ def enrich(row, route, cfg):
     return out, warnings
 
 
-def write_workbook(path, columns, rows, highlight):
+def write_workbook(path, columns, rows, highlight, validations=None):
+    """validations: {column name: DataValidation}, applied down that column (and well
+    below the last row, so the customer can add lines)."""
     wb = Workbook()
     ws = wb.active
     ws.title = "Sheet1"
     ws.append(columns)
     for row in rows:
         ws.append([row.get(col) for col in columns])
+    for name, validation in (validations or {}).items():
+        if name in columns:
+            letter = ws.cell(row=1, column=columns.index(name) + 1).column_letter
+            validation.add("%s2:%s%d" % (letter, letter, max(ws.max_row, 1000)))
+            ws.add_data_validation(validation)
     for idx, name in enumerate(columns, start=1):
         if name in highlight:
             for r in range(1, ws.max_row + 1):
@@ -253,18 +335,17 @@ def write_workbook(path, columns, rows, highlight):
 
 
 def prepare(input_path, out_dir, cfg, headers_file=None):
-    """Run the whole prep. Returns a summary dict."""
+    """Run the whole prep. `input_path` is one spreadsheet or a list of them (the
+    electronic / physical / P-E files the customer returned). Returns a summary dict."""
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    headers, rows = read_sop(input_path)
+    headers, rows = read_sops(input_path)
     added = list(cfg["added_columns"].values())
     columns = headers + [name for name in added if name not in headers]
-    highlight = set(read_mapped_columns(headers_file)) | set(added)
-    highlight.add(cfg["columns"]["format"])
+    highlight = set(added)                     # only the columns we add, not the SOP's
     a = cfg["added_columns"]
-    customer_fields = [a["fund"], a["org"]]
-    if cfg["rules"].get("use_expense_classes", True):
-        customer_fields.append(a["expense_class"])
+    all_fields = list(dict.fromkeys(f for r in ROUTES for f in customer_fields(r, cfg)))
+    settings_rows = []
 
     routed = {r: [] for r in ROUTES}
     defaults_used = []
@@ -278,9 +359,13 @@ def prepare(input_path, out_dir, cfg, headers_file=None):
             continue
         new, warn = enrich(row, route, cfg)
         warnings.extend(warn)
-        for field in customer_fields:            # a customer column exists but is blank
+        for field in customer_fields(route, cfg):   # customer column exists but is blank
+            if field == a["renewal_interval"] and new[a["order_type"]] == "One-Time":
+                continue                                 # no interval for a one-time order
             if field in headers and blank(row.get(field)):
                 defaults_used.append((row["_row"], field, new[field]))
+        settings_rows.append((new.get(cfg["columns"]["order_number"]), route,
+                              new[a["order_type"]], new[a["renewal_interval"]]))
         if blank(row.get(cfg["columns"]["issn"])):
             no_issn.append((row["_row"], new.get(cfg["columns"]["order_number"]),
                             row.get(cfg["columns"]["title"]),
@@ -311,6 +396,22 @@ def prepare(input_path, out_dir, cfg, headers_file=None):
         w.writerow(["sheet_row", "column", "default_used"])
         w.writerows(defaults_used)
 
+    # What `finish` needs to convert each PO: one-time or ongoing, and
+    # the renewal interval. A PO number on several lines keeps its first line's choice.
+    chosen = {}
+    for number, route, order_type, days in settings_rows:
+        number = str(number).strip() if not blank(number) else ""
+        if not number:
+            continue
+        if number in chosen and chosen[number][1:] != (order_type, days):
+            warnings.append("order %s: lines disagree on order type / interval; "
+                            "using the first (%s %s)" % ((number,) + chosen[number][1:]))
+        chosen.setdefault(number, (route, order_type, days))
+    with open(out_dir / "order_settings.csv", "w", newline="", encoding="utf-8") as fh:
+        w = csv.writer(fh)
+        w.writerow(["order_number", "route", "order_type", "interval_days"])
+        w.writerows((n,) + v for n, v in chosen.items())
+
     order_col = cfg["columns"]["order_number"]
     counts = Counter(r.get(order_col) for rs in routed.values() for r in rs)
     dupes = sorted(k for k, v in counts.items() if v > 1 and k)
@@ -332,15 +433,19 @@ def prepare(input_path, out_dir, cfg, headers_file=None):
                  "title number, %d with a generated identifier)" % (
                      len(no_issn), sum(1 for r in no_issn if r[6] == "No" and r[5]),
                      sum(1 for r in no_issn if r[6] == "Yes")))
-    loaded = sum(len(v) for v in routed.values())
-    for field in customer_fields:
+    for field in all_fields:
+        applies = sum(len(routed[r]) for r in ROUTES if field in customer_fields(r, cfg))
         if field in headers:
             blanks = sum(1 for d in defaults_used if d[1] == field)
-            lines.append("%s: customer column present; blank on %d of %d loaded rows "
-                         "(default used; see prep_defaults_used.csv)" % (field, blanks, loaded))
+            lines.append("%s: customer column present; blank on %d of %d rows it applies "
+                         "to (default used; see prep_defaults_used.csv)"
+                         % (field, blanks, applies))
         else:
             lines.append("%s: no such column in the SOP; the config default was used "
-                         "for all %d rows" % (field, loaded))
+                         "for all %d rows" % (field, applies))
+    lines.append("Orders: %d ongoing, %d one-time (see order_settings.csv)"
+                 % (sum(1 for v in chosen.values() if v[1] == "Ongoing"),
+                    sum(1 for v in chosen.values() if v[1] == "One-Time")))
     lines.append("Order numbers on more than one line (kept as multi-line POs): %s"
                  % (", ".join(map(str, dupes)) or "none"))
     lines.append("Warnings: %d" % len(warnings))
@@ -352,52 +457,114 @@ def prepare(input_path, out_dir, cfg, headers_file=None):
             "duplicate_orders": dupes, "warnings": warnings}
 
 
+def customer_validations(route, cfg):
+    """Drop-down / number checks for the customer columns of a spreadsheet."""
+    a = cfg["added_columns"]
+    fields = customer_fields(route, cfg)
+    checks = {}
+    if a["order_type"] in fields:
+        dv = DataValidation(type="list", allow_blank=True, showDropDown=False,
+                            formula1='"%s"' % ",".join(cfg["order_type_choices"]))
+        dv.error, dv.errorTitle = ("Choose %s from the list."
+                                   % " or ".join(cfg["order_type_choices"]),
+                                   "Order type")
+        dv.prompt, dv.promptTitle = ("Choose Ongoing or One-Time. If Ongoing, fill in "
+                                     "the renewal interval in days.", "Order type")
+        checks[a["order_type"]] = dv
+    if a["renewal_interval"] in fields:
+        dv = DataValidation(type="whole", operator="greaterThan", formula1="0",
+                            allow_blank=True)
+        dv.error, dv.errorTitle = ("Enter the renewal interval as a whole number of "
+                                   "days, e.g. 365.", "Renewal interval")
+        dv.prompt, dv.promptTitle = ("Days between renewals. Needed only when the "
+                                     "order type is Ongoing.", "Renewal interval")
+        checks[a["renewal_interval"]] = dv
+    for key in ("location", "material_type"):
+        options = cfg.get("customer_choices", {}).get(key) or []
+        if a[key] in fields and options:
+            dv = DataValidation(type="list", allow_blank=True, showDropDown=False,
+                                formula1='"%s"' % ",".join(options))
+            dv.error, dv.errorTitle = "Choose a value from the list.", a[key]
+            checks[a[key]] = dv
+    for dv in checks.values():
+        dv.showErrorMessage = dv.showInputMessage = True
+    return checks
+
+
 def prepare_for_customer(input_path, out_dir, cfg):
-    """Stage 1 of the workflow: the spreadsheet that goes to the customer.
+    """Stage 1 of the workflow: the spreadsheets that go to the customer.
 
-    Removes every zero-dollar line, adds the columns the customer fills in line by line
-    (FOLIO Org, FOLIO Fund and, if used, FOLIO Expense Class; highlighted yellow) and
-    writes <out_dir>/customer/<name>_for_customer.xlsx plus a log of the removed lines.
-    Everything else about the SOP is left untouched; the remaining rules (formats, Fee
-    rows, ...) are applied later, when the filled-in spreadsheet comes back."""
-    c, a = cfg["columns"], cfg["added_columns"]
+    Removes every zero-dollar line, splits the rest by format into an electronic, a
+    physical and a print + electronic (P-E) spreadsheet, and adds the columns the
+    customer fills in on each (highlighted light yellow; see `customer_columns` in the
+    config: org, fund, expense class, order type and renewal interval on all three,
+    plus location and material type on the physical and P-E files). Writes
+    <out_dir>/customer/<name>_for_customer_<label>.xlsx, a log of the
+    removed lines and a log of the lines that belong in none of the three (Fee or
+    unrecognised format). Everything else about the SOP is left untouched; the remaining
+    rules are applied later, when the filled-in spreadsheets come back."""
+    c = cfg["columns"]
     headers, rows = read_sop(input_path)
-    customer_cols = [a["org"], a["fund"]]
-    if cfg["rules"].get("use_expense_classes", True):
-        customer_cols.append(a["expense_class"])
-    columns = headers + [name for name in customer_cols if name not in headers]
 
-    kept, removed = [], []
+    kept = {r: [] for r in ROUTES}
+    removed, unrouted = [], []
     for row in rows:
         if to_cost(row.get(c["cost"])) == 0:            # blank counts as zero dollars
             removed.append((row["_row"], row.get(c["title"]), row.get(c["order_number"]),
                             "Yes" if not blank(row.get(c["package"])) else "No"))
+            continue
+        route = route_for(row.get(c["format"]), cfg)
+        if route in kept:
+            kept[route].append(row)
         else:
-            kept.append(row)
+            unrouted.append((row["_row"], row.get(c["title"]), row.get(c["order_number"]),
+                             row.get(c["format"]), "Fee" if route == "excluded"
+                             else "Unrecognized format"))
 
     folder = Path(out_dir) / "customer"
     folder.mkdir(parents=True, exist_ok=True)
     stem = Path(input_path).stem
-    target = folder / ("%s_for_customer.xlsx" % stem)
-    write_workbook(target, columns, kept, set(customer_cols))
+    files, fill_in = {}, {}
+    for route in ROUTES:
+        if not kept[route]:
+            continue
+        fields = customer_fields(route, cfg)
+        columns = headers + [name for name in fields if name not in headers]
+        target = folder / ("%s_for_customer_%s.xlsx"
+                           % (stem, cfg["customer_file_labels"][route]))
+        write_workbook(target, columns, kept[route], set(fields),
+                       customer_validations(route, cfg))
+        files[route], fill_in[route] = target, fields
     with open(folder / ("%s_zero_dollar_removed.csv" % stem), "w", newline="",
               encoding="utf-8") as fh:
         w = csv.writer(fh)
         w.writerow(["sheet_row", "title", "order_number", "in_a_package"])
         w.writerows(removed)
-    report = ["Stage 1: spreadsheet for the customer", "Input: %s" % input_path,
+    with open(folder / ("%s_not_sent.csv" % stem), "w", newline="",
+              encoding="utf-8") as fh:
+        w = csv.writer(fh)
+        w.writerow(["sheet_row", "title", "order_number", "format", "reason"])
+        w.writerows(unrouted)
+    report = ["Stage 1: spreadsheets for the customer", "Input: %s" % input_path,
               "Rows read: %d" % len(rows),
               "Zero-dollar lines removed: %d (%d in a package); listed in %s"
               % (len(removed), sum(1 for r in removed if r[3] == "Yes"),
                  "%s_zero_dollar_removed.csv" % stem),
-              "Lines for the customer: %d" % len(kept),
-              "Columns for the customer to fill in (highlighted): %s"
-              % ", ".join(customer_cols),
-              "Send: %s" % target.name]
+              "Lines not sent (Fee or unrecognized format): %d; listed in %s"
+              % (len(unrouted), "%s_not_sent.csv" % stem)]
+    for route in ROUTES:
+        if route in files:
+            report.append("%s: %d lines -> %s; customer fills in (highlighted): %s" % (
+                cfg["customer_file_labels"][route], len(kept[route]),
+                files[route].name, ", ".join(fill_in[route])))
+        else:
+            report.append("%s: no lines; no spreadsheet" % cfg["customer_file_labels"][route])
     (folder / ("%s_for_customer_report.txt" % stem)).write_text(
         "\n".join(report) + "\n", encoding="utf-8")
-    return {"read": len(rows), "removed": len(removed), "kept": len(kept),
-            "file": target, "columns": customer_cols}
+    return {"read": len(rows), "removed": len(removed), "unrouted": len(unrouted),
+            "kept": sum(len(v) for v in kept.values()),
+            "counts": {r: len(v) for r, v in kept.items()},
+            "files": files, "columns": fill_in}
 
 
 def main(argv=None):
