@@ -5,7 +5,9 @@ A preflight check (folio_preflight.py) runs first and stops the load on any erro
 Without --live it stops after the preflight.
 """
 import argparse
+import csv
 import time
+from datetime import datetime
 from pathlib import Path
 
 import httpx
@@ -94,10 +96,17 @@ def wait_for_jobs(client, file_name, since, wait=180):
         (j["hrId"], j.get("subordinationType"), j.get("status")) for j in jobs])
 
 
-def job_log(client, job_id):
-    r = client.folio_get("/metadata-provider/jobLogEntries/%s" % job_id,
-                         query_params={"limit": 50})
-    return r.get("entries", [])
+def job_log(client, job_id, page=100):
+    """All log entries of a job (the API returns them in pages)."""
+    entries, offset = [], 0
+    while True:
+        r = client.folio_get("/metadata-provider/jobLogEntries/%s" % job_id,
+                             query_params={"limit": page, "offset": offset})
+        got = r.get("entries", [])
+        entries += got
+        offset += len(got)
+        if not got or offset >= r.get("totalRecords", offset):
+            return entries
 
 
 def main(argv=None):
@@ -109,6 +118,8 @@ def main(argv=None):
     p.add_argument("--config", default="ebsconet_config.json")
     p.add_argument("--route", choices=("online", "print", "pe"),
                    help="needed only if the job profile name is not the standard one")
+    p.add_argument("--log-dir", default="out/import_logs",
+                   help="folder for the per-import audit CSV")
     p.add_argument("--skip-preflight", action="store_true",
                    help="load even if the preflight check finds errors")
     args = p.parse_args(argv)
@@ -131,20 +142,77 @@ def main(argv=None):
         print("dry run: preflight only; would run job profile", profiles[0]["id"])
         return 0
     jobs = upload_and_run(client, args.mrc, profiles[0]["id"], args.job_profile)
-    for job in jobs:
-        print("job HRID %s %s %s progress %s" % (
-            job["hrId"], job.get("subordinationType"), job.get("status"),
-            (job.get("progress") or {}).get("current")))
-        for e in job_log(client, job["id"]):
-            info = e.get("relatedPoLineInfo") or {}
-            print("   record %s %-45s %s %s" % (
-                e.get("sourceRecordOrder"), (e.get("sourceRecordTitle") or "")[:45],
-                info.get("actionStatus", ""), info.get("error") or e.get("error") or ""))
+    entries = {job["id"]: job_log(client, job["id"]) for job in jobs}
+    results = po_results(client, numbers)
+    rows = log_rows(jobs, entries, results)
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    log_path = Path(args.log_dir) / ("%s_%s.csv" % (stamp, Path(args.mrc).stem))
+    write_audit(log_path, rows)
+    print(summary(jobs, entries, results))
+    print("audit log:", log_path)
+    return 0 if all(r["ok"] for r in results) else 1
+
+
+def po_results(client, numbers):
+    """For each PO number: does the PO exist, and does it have a PO line?"""
+    out = []
     for n in numbers:
         po = client.folio_get("/orders/composite-orders", key="purchaseOrders",
-                              query_params={"query": 'poNumber=="%s"' % n})
-        print("PO", n, "->", [(o["id"], o["workflowStatus"]) for o in po] or "NOT CREATED")
-    return 0
+                              query_params={"query": 'poNumber=="%s"' % n, "limit": 2})
+        lines = client.folio_get("/orders/order-lines", key="poLines", query_params={
+            "query": 'poLineNumber=="%s-*"' % n, "limit": 5}) if po else []
+        status = po[0]["workflowStatus"] if po else ""
+        out.append({"po": n, "exists": bool(po), "lines": len(lines), "status": status,
+                    "ok": bool(po) and len(lines) > 0})
+    return out
+
+
+def log_rows(jobs, entries, results):
+    """Flat rows for the audit CSV: kind, ref, status, detail."""
+    rows = []
+    for job in jobs:
+        rows.append(("job", job["hrId"], job.get("status"),
+                     "%s progress %s" % (job.get("subordinationType"),
+                                         (job.get("progress") or {}).get("current"))))
+        for e in entries.get(job["id"], []):
+            info = e.get("relatedPoLineInfo") or {}
+            rows.append(("record", "job %s record %s: %s" % (
+                job["hrId"], e.get("sourceRecordOrder"),
+                (e.get("sourceRecordTitle") or "")[:60]),
+                info.get("actionStatus", ""), info.get("error") or e.get("error") or ""))
+    for r in results:
+        rows.append(("po", r["po"], "ok" if r["ok"] else "PROBLEM",
+                     "status %s, %d line(s)" % (r["status"] or "MISSING", r["lines"])))
+    return rows
+
+
+def write_audit(path, rows):
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", newline="", encoding="utf-8") as fh:
+        w = csv.writer(fh)
+        w.writerow(["kind", "ref", "status", "detail"])
+        w.writerows(rows)
+
+
+def summary(jobs, entries, results):
+    lines = ["jobs: " + ", ".join("%s %s" % (j["hrId"], j.get("status")) for j in jobs)]
+    bad = [(j, e) for j in jobs for e in entries.get(j["id"], [])
+           if (e.get("relatedPoLineInfo") or {}).get("actionStatus") not in ("CREATED",)]
+    for job, e in bad[:20]:
+        info = e.get("relatedPoLineInfo") or {}
+        lines.append("  job %s record %s %s: %s %s" % (
+            job["hrId"], e.get("sourceRecordOrder"),
+            (e.get("sourceRecordTitle") or "")[:40], info.get("actionStatus", ""),
+            str(info.get("error") or e.get("error") or "")[:200]))
+    if len(bad) > 20:
+        lines.append("  ... and %d more (see the audit log)" % (len(bad) - 20))
+    good = sum(r["ok"] for r in results)
+    lines.append("POs with a PO line: %d of %d" % (good, len(results)))
+    for r in results:
+        if not r["ok"]:
+            lines.append("  PROBLEM %s: %s, %d line(s)" % (
+                r["po"], r["status"] or "PO MISSING", r["lines"]))
+    return "\n".join(lines)
 
 
 if __name__ == "__main__":

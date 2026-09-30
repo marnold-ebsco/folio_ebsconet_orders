@@ -24,7 +24,10 @@ Not in the repo (git-ignored): filled-in `*.ini` files, the SOP spreadsheets, `o
 | 4 FOLIO profiles | `folio_setup.py` | done (dry run verified; not yet run live) |
 | - Test data on tenant | `folio_test_data.py` | run once on the bugfest tenant |
 | 5 Load a .mrc | `folio_import.py` | tested live (bugfest) |
-| - Remove bad POs/lines | `folio_delete_orders.py` | tested with mocks only |
+| - Retry failed records | `folio_retry_failed.py` | tested live (bugfest) |
+| - Remove bad POs/lines | `folio_delete_orders.py` | tested live (PO and line delete) |
+
+Start-to-finish checklist: see `RUNBOOK.md`.
 
 All tunable values live in `ebsconet_config.json`. The SOP-column -> MARC-tag map
 lives in `order_marc_headers.xlsx` (edit it in Excel).
@@ -130,6 +133,14 @@ file splitting on, as bugfest does), runs the job profile, waits for the parent/
 jobs and prints the log entries. Without `--live` it only checks the PO numbers are
 unused. Refuses to run if any PO number in the file already exists.
 
+**Audit log and retries.** Every live load writes `out/import_logs/<time>_<file>.csv`
+(columns kind / ref / status / detail: one row per job, per log record and per PO) and
+prints a summary: POs that have a PO line, and each discarded record with its error.
+If some records failed, `folio_retry_failed.py <file>.mrc --ini ...` (read-only) finds the
+records with no PO or an empty PO and writes `out/retry/<file>_retry.mrc` plus, for empty
+POs, `out/retry/<file>_delete_empty.csv` (same format as `folio_delete_orders.py`; delete
+those first, fix the cause, then load the retry file).
+
 **Preflight check (`folio_preflight.py`)** runs automatically before every load and
 stops it on any error (`--skip-preflight` overrides). It can also be run alone:
 ```
@@ -154,6 +165,12 @@ lines) or WARN, grouped by type. Checks:
   (allocation 0, no percentage) are unlimited and give no warning.
 The route (`online` / `print` / `pe`) is taken from the standard job-profile name, or
 give `--route`. On 2026-09-30 it correctly blocked re-loading POs that already exist.
+
+Trial loads on bugfest (2026-09-30): 25 varied online records (7 without ISSN, 10
+without title number; no accented characters exist in the sample) then the remaining 82:
+all 107 POs created Pending with a PO line, none discarded. A pure Print record (physical
+format, receipt Pending, location + material type, no electronic side) also loaded. The
+POL export listed 112 lines, all POL = PO + `-1`.
 
 Test on bugfest (2026-09-30): two online records (PO L9544821, S0110567) created Pending,
 approved, vendor `ebsconet`, one electronic line each with correct ISSN, dates, publisher,
