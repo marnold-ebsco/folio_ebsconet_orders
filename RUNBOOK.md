@@ -132,11 +132,34 @@ load it with `python -m pipeline.folio_import`; see the README).
 - [ ] Something failed? Section D.
 
 ### 8-9. Ongoing conversion and the EBSCONET hand-off
+
+**What this step does, and why.** Each order has two separate settings: its **status**
+(Pending / Open / Closed) and its **order type** (One-Time / Ongoing). Data Import creates
+every order as **One-Time** and **Pending**. The `finish` step changes only the *type*, to
+**Ongoing**, and never the status: the orders stay **Pending** (nothing is encumbered, and
+nothing is opened by these scripts).
+
+Why convert: these are annual subscriptions, and an Ongoing order carries the renewal
+details a One-Time order lacks: a renewal interval, a "subscription" flag and a renewal
+date. The instructions (step 25) call for this conversion, and the EBSCONET renewal
+integration works from those orders. It is a separate step because the Data Import mapping
+profile has no fields for the ongoing details, so they cannot be set during the import.
+
+What it sets (config section `ongoing` in `ebsconet_config.json`): interval 365 days,
+subscription on, manual renewal off, and the renewal date taken from the **latest
+subscription end date** of the order's lines (`renewal_date_source`; other choices are the
+earliest end date, or no date). It also removes any empty product-ID rows. It only converts
+orders that are **Pending** and not already Ongoing; anything else is skipped and logged.
+
+It is optional and safe to leave for later: nothing is converted unless you run it with
+`--live`. Without `--live` it is a dry run (shows the renewal dates in
+`out/ongoing_log.csv`), and the orders simply stay One-Time. The decision to keep this step
+as is was made on 2026-09-30; revisit it if the renewal dates should work differently.
+
 - [ ] `.venv/bin/python ebsconet.py finish --ini TENANT.ini` (dry run: shows the renewal
       dates in `out/ongoing_log.csv` and writes the PO / POL export).
 - [ ] Same with `--live` to convert the POs to ongoing orders. Orders stay **Pending**.
-      The settings (interval, subscription flag, renewal-date rule) are in the config's
-      `ongoing` section.
+      In FOLIO each converted order shows type Ongoing and status Pending.
 - [ ] Send `out/pol_export.csv` to EBSCONET. The POL number is the PO number + `-1`;
       any line not ending in `-1` is flagged `NO - line N` for you to sort out by hand.
 
