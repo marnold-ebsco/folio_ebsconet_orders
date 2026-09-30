@@ -82,6 +82,12 @@ def normalize_url(value):
                        parts.query, parts.fragment))
 
 
+def customer_value(row, column):
+    """The customer's own value from a SOP column, or '' when blank or absent."""
+    value = row.get(column)
+    return "" if blank(value) else str(value).strip()
+
+
 def cancellation_restriction(cancellable):
     """SOP 'Cancellable' Yes/No -> FOLIO cancellationRestriction (inverted): a title
     that is not cancellable is restricted. Anything else is left blank."""
@@ -186,11 +192,15 @@ def enrich(row, route, cfg):
         row.get(c["cancellable"]))
     out[a["po_line_description"]] = line_description(
         row.get(c["descriptor"]), row.get(c["frequency"]), cfg["description_separator"])
-    out[a["fund"]] = cfg["fund_by_route"][route]
-    out[a["expense_class"]] = (cfg["expense_class_by_subject"].get(
-        str(row.get(c["subject"]) or "").strip(), cfg["default_expense_class"])
+    # FOLIO Fund / Expense Class / Org are filled in by the customer line by line in the
+    # SOP; a blank cell (or a missing column) falls back to the config defaults.
+    out[a["fund"]] = customer_value(row, a["fund"]) or cfg["fund_by_route"][route]
+    out[a["expense_class"]] = (
+        customer_value(row, a["expense_class"])
+        or cfg["expense_class_by_subject"].get(
+            str(row.get(c["subject"]) or "").strip(), cfg["default_expense_class"])
         if cfg["rules"].get("use_expense_classes", True) else "")
-    out[a["org"]] = cfg["org_by_publisher"].get(
+    out[a["org"]] = customer_value(row, a["org"]) or cfg["org_by_publisher"].get(
         str(row.get(c["publisher"]) or "").strip(), cfg["default_org"])
     out[a["package_flag"]] = "Yes" if is_package(row, cfg) else "No"
     tn = row.get(c["title_number_source"])
@@ -229,11 +239,16 @@ def prepare(input_path, out_dir, cfg, headers_file=None):
     out_dir.mkdir(parents=True, exist_ok=True)
     headers, rows = read_sop(input_path)
     added = list(cfg["added_columns"].values())
-    columns = headers + added
+    columns = headers + [name for name in added if name not in headers]
     highlight = set(read_mapped_columns(headers_file)) | set(added)
     highlight.add(cfg["columns"]["format"])
+    a = cfg["added_columns"]
+    customer_fields = [a["fund"], a["org"]]
+    if cfg["rules"].get("use_expense_classes", True):
+        customer_fields.append(a["expense_class"])
 
     routed = {r: [] for r in ROUTES}
+    defaults_used = []
     no_issn = []
     exclusions = []
     warnings = []
@@ -244,6 +259,9 @@ def prepare(input_path, out_dir, cfg, headers_file=None):
             continue
         new, warn = enrich(row, route, cfg)
         warnings.extend(warn)
+        for field in customer_fields:            # a customer column exists but is blank
+            if field in headers and blank(row.get(field)):
+                defaults_used.append((row["_row"], field, new[field]))
         if blank(row.get(cfg["columns"]["issn"])):
             no_issn.append((row["_row"], new.get(cfg["columns"]["order_number"]),
                             row.get(cfg["columns"]["title"]),
@@ -269,6 +287,11 @@ def prepare(input_path, out_dir, cfg, headers_file=None):
                     "identifier_used", "identifier_generated"])
         w.writerows(no_issn)
 
+    with open(out_dir / "prep_defaults_used.csv", "w", newline="", encoding="utf-8") as fh:
+        w = csv.writer(fh)
+        w.writerow(["sheet_row", "column", "default_used"])
+        w.writerows(defaults_used)
+
     order_col = cfg["columns"]["order_number"]
     counts = Counter(r.get(order_col) for rs in routed.values() for r in rs)
     dupes = sorted(k for k, v in counts.items() if v > 1 and k)
@@ -290,6 +313,15 @@ def prepare(input_path, out_dir, cfg, headers_file=None):
                  "title number, %d with a generated identifier)" % (
                      len(no_issn), sum(1 for r in no_issn if r[6] == "No" and r[5]),
                      sum(1 for r in no_issn if r[6] == "Yes")))
+    loaded = sum(len(v) for v in routed.values())
+    for field in customer_fields:
+        if field in headers:
+            blanks = sum(1 for d in defaults_used if d[1] == field)
+            lines.append("%s: customer column present; blank on %d of %d loaded rows "
+                         "(default used; see prep_defaults_used.csv)" % (field, blanks, loaded))
+        else:
+            lines.append("%s: no such column in the SOP; the config default was used "
+                         "for all %d rows" % (field, loaded))
     lines.append("Order numbers on more than one line (kept as multi-line POs): %s"
                  % (", ".join(map(str, dupes)) or "none"))
     lines.append("Warnings: %d" % len(warnings))

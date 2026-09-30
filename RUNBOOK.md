@@ -24,7 +24,8 @@ copy of `sample.ini`. Nothing writes to FOLIO unless a step says `--live`.
 - [ ] Your user can create Data Import profiles, run imports, and create/edit orders.
 - [ ] Expense classes are optional: set `rules.use_expense_classes` to `false` if the
       tenant does not use them.
-- [ ] Edit `ebsconet_config.json`: fund per route (`fund_by_route`), expense classes
+- [ ] Edit `ebsconet_config.json` (the *defaults* used when the customer leaves a cell
+      blank): fund per route (`fund_by_route`), expense classes
       (`expense_class_by_subject`, `default_expense_class`), `default_org` /
       `org_by_publisher`, and the `folio` section (location, material type, vendor org,
       acquisition method, payment method for new accounts).
@@ -32,7 +33,10 @@ copy of `sample.ini`. Nothing writes to FOLIO unless a step says `--live`.
       in the config to match.
 
 ## 2. Prepare the files (each SOP)
-- [ ] Put the SOP .xlsx in the folder.
+- [ ] Put the SOP .xlsx in the folder. The customer should have added and filled in the
+      columns **FOLIO Org**, **FOLIO Fund** and **FOLIO Expense Class** (if used) on
+      every line. Blank cells fall back to the config defaults (see
+      `out/prep_defaults_used.csv` after the prep).
 - [ ] `.venv/bin/python ebsconet_prep.py SOP.xlsx --out out`
 - [ ] Read `out/prep_report.txt`: row counts per route, exclusions by reason, and the
       **"Removed rows with a non-zero cost"** list (money that will not be loaded).

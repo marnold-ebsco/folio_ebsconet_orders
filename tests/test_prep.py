@@ -238,3 +238,55 @@ def test_prepare_end_to_end(cfg, tmp_path):
 
 def test_config_is_valid_json():
     json.loads((ROOT / "ebsconet_config.json").read_text(encoding="utf-8"))
+
+
+def test_customer_values_win_over_the_config_defaults(cfg):
+    row = make_row(**{"FOLIO Fund": " MYFUND ", "FOLIO Expense Class": "MYEC",
+                      "FOLIO Org": "MYORG"})
+    out, _ = prep.enrich(row, "online", cfg)
+    assert (out["FOLIO Fund"], out["FOLIO Expense Class"], out["FOLIO Org"]) == (
+        "MYFUND", "MYEC", "MYORG")
+
+
+def test_blank_or_missing_customer_values_fall_back_to_defaults(cfg):
+    blank_row = make_row(**{"FOLIO Fund": "", "FOLIO Expense Class": None,
+                            "FOLIO Org": "  "})
+    out, _ = prep.enrich(blank_row, "print", cfg)
+    assert (out["FOLIO Fund"], out["FOLIO Expense Class"], out["FOLIO Org"]) == (
+        "TEST-PRINT", "PHY", "EBSCO")                       # subject map, default org
+    out, _ = prep.enrich(make_row(), "online", cfg)         # no such columns at all
+    assert out["FOLIO Fund"] == "TEST-ELEC"
+
+
+def test_expense_class_off_ignores_the_customers_value_too(cfg):
+    cfg["rules"]["use_expense_classes"] = False
+    out, _ = prep.enrich(make_row(**{"FOLIO Expense Class": "MYEC"}), "online", cfg)
+    assert out["FOLIO Expense Class"] == ""
+
+
+def test_prepare_uses_existing_customer_columns_once_and_reports_defaults(cfg, tmp_path):
+    headers = HEADERS + ["FOLIO Org", "FOLIO Fund", "FOLIO Expense Class"]
+    rows = [make_row(**{"Order Number": "A", "FOLIO Org": "O1", "FOLIO Fund": "F1",
+                        "FOLIO Expense Class": "E1"}),
+            make_row(**{"Order Number": "B", "FOLIO Org": "", "FOLIO Fund": "F2",
+                        "FOLIO Expense Class": ""})]
+    src = tmp_path / "sop.xlsx"
+    wb = Workbook()
+    ws = wb.active
+    ws.append(headers)
+    for r in rows:
+        ws.append([r.get(h) for h in headers])
+    wb.save(src)
+    prep.prepare(src, tmp_path / "out", cfg, None)
+
+    out = load_workbook(tmp_path / "out" / cfg["output_names"]["online"]).active
+    names = [c.value for c in out[1]]
+    assert names.count("FOLIO Fund") == 1 and names.count("FOLIO Org") == 1
+    got = [dict(zip(names, [c.value for c in row])) for row in out.iter_rows(min_row=2)]
+    assert [(g["FOLIO Fund"], g["FOLIO Org"], g["FOLIO Expense Class"]) for g in got] == [
+        ("F1", "O1", "E1"), ("F2", "EBSCO", "PHY")]
+    used = (tmp_path / "out" / "prep_defaults_used.csv").read_text(encoding="utf-8")
+    assert "FOLIO Org,EBSCO" in used and "FOLIO Expense Class,PHY" in used
+    assert "FOLIO Fund" not in used
+    report = (tmp_path / "out" / "prep_report.txt").read_text(encoding="utf-8")
+    assert "FOLIO Org: customer column present; blank on 1 of 2" in report

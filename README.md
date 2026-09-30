@@ -42,6 +42,18 @@ Outputs: `out/library-EBSCONET_*.xlsx`, `out/prep_report.txt`,
 `out/prep_exclusions.csv` (every removed row and why), and `out/marc/*.mrc|.mrk`.
 An empty split (for example print, when every print row is $0) produces no MARC file.
 
+**Customer columns (instruction steps 2-3).** The customer adds three columns to the SOP and
+fills them in **line by line**: `FOLIO Org` (access provider organization code),
+`FOLIO Fund` (fund code) and `FOLIO Expense Class` (expense class code, if used). Prep
+uses those values as they are. Only a blank cell, or a SOP without that column, falls back
+to the config defaults (`fund_by_route`, `expense_class_by_subject` / `default_expense_class`,
+`org_by_publisher` / `default_org`). If the columns are already in the SOP they are used in
+place, never duplicated. The fallbacks are reported in `out/prep_report.txt` and listed
+row by row in `out/prep_defaults_used.csv`, so you can ask the customer to fill the gaps.
+Wrong codes (typos, codes not on the tenant) are caught by the preflight check before a
+load. The test SOP has these columns filled with test values (two funds, three classes,
+three organizations, a few lines left blank on purpose).
+
 Row rules (config `rules` and `package_title_keywords`): zero-cost rows are removed;
 package members at $0 are removed; "Fee" and unrecognized formats are removed. Rows
 with no ISSN are **loaded** and listed in `out/prep_no_issn.csv` (see below).

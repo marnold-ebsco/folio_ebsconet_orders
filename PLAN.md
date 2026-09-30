@@ -39,6 +39,9 @@ except pymarc / openpyxl / httpx.
   formats are not loaded. **Every other row is loaded; rows without an ISSN are logged**
   (`out/prep_no_issn.csv`). A row with neither an ISSN nor a title number gets a generated
   product ID `NOISSN-<order number>` (type Local identifier). See "Data rules" in the README.
+- **Fund, expense class and org come from the customer's SOP columns** (FOLIO Fund /
+  FOLIO Expense Class / FOLIO Org, filled line by line); the config values are only the
+  fallback for blank cells. Fallbacks are logged (`out/prep_defaults_used.csv`).
 - **Orders stay Pending.** The mapping profiles set `workflowStatus` to `"Pending"`;
   no script opens an order, and the preflight check refuses to load with a job profile
   whose mapping sets any other status. Budgets matter only for having an Active budget with the
