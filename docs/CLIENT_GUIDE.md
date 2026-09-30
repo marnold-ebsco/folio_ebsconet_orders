@@ -13,7 +13,7 @@ Two things to know up front:
   until you open them yourselves.
 - **You decide where the money is charged.** Which fund, which expense class and which
   organization go on each order is your choice. You give us that information, line by line,
-  in a spreadsheet (step 3 below).
+  in the spreadsheets we send you (step 4 below).
 
 ## The process, in order
 | # | Who | What happens |
@@ -22,7 +22,7 @@ Two things to know up front:
 | 2 | You | **Before we start:** your FOLIO system is checked against the list in section 1 below, and the choices in section 3 are made. |
 | 3 | EBSCO | We prepare your copy of the spreadsheet: we remove the lines that cost nothing, split the rest by format into up to **three spreadsheets** (electronic, physical, and print + electronic, "P/E"), and add empty columns for you to fill in. We send them to you. |
 | 4 | **You** | **You fill in the highlighted columns on every line of each spreadsheet and send them all back** (section 2). |
-| 5 | EBSCO | We check your codes against your FOLIO system. If anything is wrong (a mistyped code, a fund that does not exist) we send you the list, you correct it, and we check again. This repeats until the file is clean. |
+| 5 | EBSCO | We check your codes against your FOLIO system. If anything is wrong (a mistyped code, a fund that does not exist) we send you the list, you correct it, and we check again. This repeats until the files are clean. |
 | 6 | EBSCO | We load the orders into FOLIO as Pending orders. |
 | 7 | You | You look over a sample of the orders in FOLIO and tell us they look right. |
 | 8 | EBSCO | We convert to *ongoing* orders the ones you marked **Ongoing**, using the renewal interval you gave (section 4). |
@@ -107,7 +107,7 @@ We set these once, at the start. Most have a sensible default, shown in brackets
 ## 4. Ongoing orders: what they are and how you choose them
 Every order in FOLIO has two separate settings:
 - **Status**: Pending, Open or Closed. *We leave every order Pending.*
-- **Order type**: One-Time or Ongoing. *This is what you choose on the spreadsheet.*
+- **Order type**: One-Time or Ongoing. *This is what you choose on the spreadsheets.*
 
 The import creates every order as **One-Time**. Your subscriptions renew every year, and an
 **Ongoing** order carries the renewal details that a One-Time order does not have: how often
@@ -135,9 +135,9 @@ there, but the choice is yours for print orders too.
 ## 5. What we do with lines that need special handling
 | Situation | What we do |
 |---|---|
-| A line costs $0 (usually a title inside a package) | Removed before you fill in the spreadsheet, and listed for you. |
+| A line costs $0 (usually a title inside a package) | Removed before you fill in the spreadsheets, and listed for you. |
 | A title has no ISSN | Loaded anyway, and listed for you. If it has no ISSN and no EBSCONET title number, it is given an identifier built from its EBSCONET order number so every order carries one. |
-| A "Fee" line, or a format we do not recognize | Set aside and listed for you. |
+| A "Fee" line, or a format we do not recognize | Set aside (it is not on any of your spreadsheets) and listed for you. |
 | The same order number appears on more than one line | The first becomes the order; the others are added to it as further order lines in a separate step. |
 | A code you entered does not exist in FOLIO | We send you the list of corrections before anything is loaded. |
 
@@ -148,7 +148,7 @@ there, but the choice is yours for print orders too.
 - Orders are **Pending**, with EBSCONET as the vendor, and show the fund, the price, the
   subscription dates, your account number, and (for online titles) the access provider and
   resource link.
-- The order type shows **Ongoing** or **One-Time** as you chose on the spreadsheet; print orders show the location and material type you chose.
+- The order type shows **Ongoing** or **One-Time** as you chose on the spreadsheets; print orders show the location and material type you chose.
 
 ## 7. What we will ask you to check
 After the load, please open a handful of orders (a mix of online and print, and a couple
