@@ -42,15 +42,19 @@ The per-step sections below describe each step's behavior and options. Their com
 | 3a One-time -> ongoing orders | `pipeline/folio_ongoing.py` | done (untested against a live tenant) |
 | 3b PO/POL export for EBSCONET | `pipeline/folio_export_pols.py` | done (untested against a live tenant) |
 | 4 FOLIO profiles | `pipeline/folio_setup.py` | done (dry run verified; not yet run live) |
-| - Test data on tenant | `folio_test_data.py` | run once on the bugfest tenant |
-| 5 Load a .mrc | `pipeline/folio_import.py` | tested live (bugfest) |
-| - Remove empty product IDs | `pipeline/folio_clean_product_ids.py` | tested live (bugfest); runs after each load |
-| - Retry failed records | `folio_retry_failed.py` | tested live (bugfest) |
+| - Test data on tenant | `folio_test_data.py` | run once on the tenant |
+| 5 Load a .mrc | `pipeline/folio_import.py` | tested live  |
+| - Remove empty product IDs | `pipeline/folio_clean_product_ids.py` | tested live; runs after each load |
+| - Retry failed records | `folio_retry_failed.py` | tested live |
 | - Remove bad POs/lines | `folio_delete_orders.py` | tested live (PO and line delete) |
 
 Start-to-finish checklist: see `RUNBOOK.md`.
 
-All tunable values live in `ebsconet_config.json`. The SOP-column -> MARC-tag map
+Settings are in two files. `ebsconet_config.json` holds what a library chooses (funds, expense
+classes, organizations, location, rules, ongoing-order settings). `pipeline/pipeline_config.json`
+holds what is fixed by the SOP layout and the process (SOP column names, the MARC tags and
+indicators, format routing, output file names); it is the same for every library and is
+merged in automatically. The SOP-column -> MARC-tag map
 lives in `order_marc_headers.xlsx` (edit it in Excel).
 
 ## Steps 1-2: files for Data Import
@@ -126,8 +130,8 @@ two-line PO) is flagged `NO - line N` for you to handle by hand.
 
 ## Step 4: accounts and Data Import profiles (`pipeline/folio_setup.py`)
 ```
-.venv/bin/python -m pipeline.folio_setup --ini sunflower_bugfest.ini            # dry run
-.venv/bin/python -m pipeline.folio_setup --ini sunflower_bugfest.ini --live     # writes to FOLIO
+.venv/bin/python -m pipeline.folio_setup --ini <tenant.ini>            # dry run
+.venv/bin/python -m pipeline.folio_setup --ini <tenant.ini> --live     # writes to FOLIO
 ```
 Does instruction steps 8-12: adds the SOP account numbers (from `out/*.xlsx`) to the
 `ebsconet` organization, then creates for Online / Print / P-E a field mapping profile,
@@ -175,7 +179,7 @@ budget when the record has one. The fund still needs an Active budget.
 
 ## Step 5: load a .mrc (`pipeline/folio_import.py`)
 ```
-.venv/bin/python -m pipeline.folio_import out/marc/<file>.mrc --ini sunflower_bugfest.ini \
+.venv/bin/python -m pipeline.folio_import out/marc/<file>.mrc --ini <tenant.ini> \
     --job-profile "EBSCONET order migration - Online" --live
 ```
 Uploads the file through the Data Import API (S3 presigned upload when the tenant has
@@ -308,8 +312,8 @@ nothing.
 
 ## Cleaning up a TEST tenant (`folio_cleanup_test_pos.py`)
 ```
-.venv/bin/python folio_cleanup_test_pos.py --ini sunflower_bugfest.ini            # dry run
-.venv/bin/python folio_cleanup_test_pos.py --ini sunflower_bugfest.ini --live     # deletes
+.venv/bin/python folio_cleanup_test_pos.py --ini <tenant.ini>            # dry run
+.venv/bin/python folio_cleanup_test_pos.py --ini <tenant.ini> --live     # deletes
 ```
 Removes the POs your test loads created. The list comes from the PO numbers (990$o) in
 your local `out/marc/*.mrc` files (or `--mrc FILE`, plus `--po NUMBER` for one-offs), so it

@@ -1,69 +1,5 @@
 {
-  "_comment": "TEST values only. Replace fund/expense class/org/location values with real tenant codes.",
-  "headers_file": "order_marc_headers.xlsx",
-  "columns": {
-    "title": "Title Name",
-    "issn": "ISSN",
-    "format": "Format",
-    "start_date": "Start Date",
-    "expiration_date": "Expiration Date",
-    "cost": "Total Cost",
-    "package": "Publisher Package",
-    "publisher": "Publisher Name",
-    "subject": "Subject Category",
-    "order_number": "Order Number",
-    "url": "URL",
-    "cancellable": "Cancellable",
-    "descriptor": "Descriptor",
-    "frequency": "Frequency",
-    "title_number_source": "Publisher Product Code"
-  },
-  "added_columns": {
-    "fund": "FOLIO Fund",
-    "expense_class": "FOLIO Expense Class",
-    "org": "FOLIO Org",
-    "package_flag": "Package?",
-    "generated_id": "Generated ID?",
-    "title_number": "Title Number",
-    "title_number_type": "Title Number Type",
-    "cancellation_restriction": "Cancellation Restriction",
-    "po_line_description": "PO Line Description"
-  },
-  "usage_loading_service_prefix": "Usage Loading Service",
-  "description_separator": "; ",
-  "generated_id": {
-    "_comment": "A line with neither an ISSN nor a title number gets this generated identifier (prefix + EBSCONET order number) in the title-number product ID, so every line carries an identifier.",
-    "prefix": "NOISSN-",
-    "type": "Local identifier"
-  },
-  "extra_marc_map": {
-    "FOLIO Fund": "990$f",
-    "FOLIO Expense Class": "990$e",
-    "FOLIO Org": "990$v",
-    "Title Number": "990$i",
-    "Title Number Type": "990$j",
-    "Cancellation Restriction": "980$k",
-    "PO Line Description": "980$d"
-  },
-  "marc_indicators": {
-    "245": ["0", "0"],
-    "264": [" ", "1"],
-    "856": ["4", "0"]
-  },
-  "marc_output_dir": "marc",
-  "package_title_keywords": ["package", "collection", "suite"],
-  "date_columns": ["Start Date", "Expiration Date", "Invoice Date"],
-  "format_routes": {
-    "online": ["online only", "database", "databases", "e-books", "e-book", "ebooks", "ebook"],
-    "print": ["print"],
-    "pe": ["online + print", "print + online", "print + online + email", "online + print + email", "print + email"]
-  },
-  "excluded_formats": ["fee"],
-  "output_names": {
-    "online": "library-EBSCONET_online.xlsx",
-    "print": "library-EBSCONET-print.xlsx",
-    "pe": "library-EBSCONET_P-E.xlsx"
-  },
+  "_comment": "Library-specific choices. The fixed, process-level settings (SOP columns, MARC tags, format routing, ...) are in pipeline/pipeline_config.json. TEST values only: replace fund/expense class/org/location values with real tenant codes.",
   "rules": {
     "exclude_zero_cost_package_members": true,
     "exclude_zero_cost": true,
@@ -99,7 +35,11 @@
     "create_inventory": "None",
     "physical_material_type": "journal",
     "location": "test_ebsconet_location (TEST-EBSCONET-LOC)",
-    "receipt_status": {"online": "Receipt Not Required", "print": "Pending", "pe": "Pending"},
+    "receipt_status": {
+      "online": "Receipt Not Required",
+      "print": "Pending",
+      "pe": "Pending"
+    },
     "account_payment_method": "Other",
     "template_dir": "template_profiles"
   },

@@ -20,9 +20,28 @@ HIGHLIGHT = PatternFill("solid", start_color="FFFF00", end_color="FFFF00")
 ROUTES = ("online", "print", "pe")
 
 
+PIPELINE_CONFIG = Path(__file__).with_name("pipeline_config.json")
+
+
+def merge(base, over):
+    """Recursively merge dicts: values in `over` win; nested dicts are merged."""
+    out = dict(base)
+    for key, value in over.items():
+        if isinstance(value, dict) and isinstance(out.get(key), dict):
+            out[key] = merge(out[key], value)
+        else:
+            out[key] = value
+    return out
+
+
 def load_config(path):
+    """The fixed, process-level settings (pipeline/pipeline_config.json) merged with the
+    library's choices (`path`, normally ebsconet_config.json). The library file wins if
+    both define a key."""
+    with open(PIPELINE_CONFIG, encoding="utf-8") as fh:
+        fixed = json.load(fh)
     with open(path, encoding="utf-8") as fh:
-        return json.load(fh)
+        return merge(fixed, json.load(fh))
 
 
 def read_sop(path):

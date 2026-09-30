@@ -63,7 +63,8 @@ the ones you run separately, when something needs fixing.
 - [ ] Note the ledger's "Restrict encumbrance" setting and the budgets' allowable-
       encumbrance %: they decide whether the orders can be *opened* later.
 - [ ] Your user can create Data Import profiles, run imports, and create / edit orders.
-- [ ] Edit `ebsconet_config.json`. The fund / expense-class / organization entries there
+- [ ] Edit `ebsconet_config.json` (only this one: the fixed settings in
+      `pipeline/pipeline_config.json` are the same for every library). The fund / expense-class / organization entries there
       are only the **defaults** used when the customer leaves a cell blank. Also set the
       `folio` section (location, material type, vendor org, acquisition method, payment
       method for new accounts), and `rules.use_expense_classes` (false if the tenant does

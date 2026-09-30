@@ -290,3 +290,27 @@ def test_prepare_uses_existing_customer_columns_once_and_reports_defaults(cfg, t
     assert "FOLIO Fund" not in used
     report = (tmp_path / "out" / "prep_report.txt").read_text(encoding="utf-8")
     assert "FOLIO Org: customer column present; blank on 1 of 2" in report
+
+
+def test_config_is_split_between_fixed_and_library_settings():
+    fixed = json.loads((ROOT / "pipeline" / "pipeline_config.json").read_text(
+        encoding="utf-8"))
+    library = json.loads((ROOT / "ebsconet_config.json").read_text(encoding="utf-8"))
+    overlap = (set(fixed) & set(library)) - {"_comment"}
+    assert overlap == set()                         # each setting lives in one file only
+    for key in ("columns", "added_columns", "extra_marc_map", "format_routes",
+                "output_names", "marc_indicators"):
+        assert key in fixed and key not in library
+    for key in ("rules", "ongoing", "fund_by_route", "folio", "default_org"):
+        assert key in library and key not in fixed
+
+
+def test_load_config_merges_both_files_and_the_library_wins(tmp_path):
+    lib = tmp_path / "lib.json"
+    lib.write_text(json.dumps({"rules": {"x": 1}, "output_names": {"online": "mine.xlsx"}}),
+                   encoding="utf-8")
+    cfg = prep.load_config(lib)
+    assert cfg["columns"]["title"] == "Title Name"            # from the fixed file
+    assert cfg["rules"] == {"x": 1}                           # from the library file
+    assert cfg["output_names"]["online"] == "mine.xlsx"       # library overrides...
+    assert cfg["output_names"]["print"] == "library-EBSCONET-print.xlsx"   # ...per key
