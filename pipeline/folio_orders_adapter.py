@@ -64,6 +64,8 @@ def row_to_line(row, route, cfg):
         "subscription_from": _text(row, col["start_date"]),
         "subscription_to": _text(row, col["expiration_date"]),
         "publisher": _text(row, col["publisher"]),
+        "description": _text(row, add["po_line_description"]),
+        "receipt_status": folio["receipt_status"][route],
         "cancellation_restriction": _text(
             row, add["cancellation_restriction"]).lower() in ("yes", "true", "1"),
     }
