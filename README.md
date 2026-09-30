@@ -236,6 +236,19 @@ Deleting a PO does not undo anything Data Import created outside the order (for 
 inventory records, if create-inventory was ever turned on). With the default of `None`
 nothing else is created.
 
+## Cleaning up a TEST tenant (`folio_cleanup_test_pos.py`)
+```
+.venv/bin/python folio_cleanup_test_pos.py --ini sunflower_bugfest.ini            # dry run
+.venv/bin/python folio_cleanup_test_pos.py --ini sunflower_bugfest.ini --live     # deletes
+```
+Removes the POs your test loads created. The list comes from the PO numbers (990$o) in
+your local `out/marc/*.mrc` files (or `--mrc FILE`, plus `--po NUMBER` for one-offs), so it
+can only touch orders you loaded. A PO is deleted only if it is **Pending** and belongs to
+the EBSCONET vendor organization; others are skipped and shown. Each PO is saved to
+`out/deleted_backup/` first; the log is `out/cleanup_test_pos_log.csv`. It does not remove
+profiles, accounts or the `test_ebsconet_*` finance / organization / location records.
+Never point it at a production tenant.
+
 ## Tenant .ini files
 `folio_common.py` reads the same `key = value` format as the PHP client (`okapiUrl`,
 `tenant_id`, `username`, `password`, `sslVerify`). These hold live credentials: keep
