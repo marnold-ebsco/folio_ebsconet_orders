@@ -141,7 +141,8 @@ lines) or WARN, grouped by type. Checks:
 - File: missing title / PO number / fund / expense class / account / access provider;
   price not a number; dates not ISO or end before start; URL FOLIO would reject; ISSN
   format; missing title number; duplicate PO numbers or 001s inside the file.
-- Tenant: job profile exists; PO numbers not already in FOLIO; vendor organization
+- Tenant: job profile exists **and its mapping profile loads orders as "Pending"** (an
+  Open status is an ERROR; if the profile chain cannot be read it is a WARN); PO numbers not already in FOLIO; vendor organization
   exists and has the account numbers (WARN); access-provider organizations exist;
   each fund exists, is Active and has an Active budget; each expense class exists **and
   is Active on that budget**; location and material type exist (print / P-E);

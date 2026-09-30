@@ -107,6 +107,7 @@ class FakeTenant:
                               "statusExpenseClasses": [{"expenseClassId": "ec1",
                                                         "status": "Active"}]},
             "expenseClasses": {"GEN": {"id": "ec1"}},
+            "status": '"Pending"',
         }
         self.data.update(kw)
 
@@ -116,6 +117,15 @@ class FakeTenant:
             return dict(d["budget_detail"], id="b1")
         if path.startswith("/finance/ledgers/"):
             return d["ledger"]
+        if path.startswith("/data-import-profiles/jobProfiles/"):
+            return d.get("job", {"childProfiles": [
+                {"id": "ap", "contentType": "ACTION_PROFILE"}]})
+        if path.startswith("/data-import-profiles/actionProfiles/"):
+            return d.get("action", {"childProfiles": [{
+                "id": "mp", "contentType": "MAPPING_PROFILE", "content": {
+                    "mappingDetails": {"mappingFields": [
+                        {"path": "order.po.workflowStatus", "value": d["status"]},
+                        {"path": "order.po.poNumber", "value": "990$o"}]}}}]})
         query = (query_params or {}).get("query", "")
         val = query.split('"')[1] if '"' in query else ""
         if key == "jobProfiles":
@@ -240,6 +250,22 @@ def test_print_route_checks_location_and_material_type(cfg):
     assert any("location" in m for m in errs) and any("material type" in m for m in errs)
     errs, _ = tenant_errors(cfg, route="online", locations={}, mtypes=[])
     assert errs == []                      # not needed for the online route
+
+
+def test_open_status_blocks_the_load(cfg):
+    errs, _ = tenant_errors(cfg, status='"Open"')
+    assert any("would load orders as \"Open\", not \"Pending\"" in m for m in errs)
+
+
+def test_pending_status_passes(cfg):
+    assert tenant_errors(cfg, status='"Pending"') == ([], [])
+
+
+def test_unverifiable_status_is_warning_not_error(cfg):
+    errs, warns = tenant_errors(cfg, job={"childProfiles": []})
+    assert errs == [] and any("could not verify" in m for m in warns)
+    errs, warns = tenant_errors(cfg, action={"childProfiles": []})
+    assert errs == [] and any("no mapping profile" in m for m in warns)
 
 
 def test_acquisition_method_missing(cfg):

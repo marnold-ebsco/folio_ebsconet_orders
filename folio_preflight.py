@@ -122,11 +122,13 @@ def check_tenant(client, recs, route, cfg, job_profile=None):
     fo = cfg["folio"]
 
     if job_profile:
-        n = len(one(client, "/data-import-profiles/jobProfiles", "jobProfiles",
-                    "name==%s" % q(job_profile)))
-        if n != 1:
+        profiles = one(client, "/data-import-profiles/jobProfiles", "jobProfiles",
+                       "name==%s" % q(job_profile))
+        if len(profiles) != 1:
             issues.append((ERROR, "tenant", "job profile %r matches %d profiles"
-                           % (job_profile, n)))
+                           % (job_profile, len(profiles))))
+        else:
+            issues += check_pending(client, profiles[0]["id"], job_profile)
 
     for rec in recs:
         if rec["order"] and one(client, "/orders/composite-orders", "purchaseOrders",
@@ -174,6 +176,47 @@ def check_tenant(client, recs, route, cfg, job_profile=None):
 
     issues += check_finance(client, recs)
     return issues
+
+
+def mapping_status_values(client, job_id):
+    """PO status values ('"Pending"', '"Open"', ...) set by the mapping profiles behind
+    a job profile (job -> action -> mapping). Returns (values, problem or None)."""
+    rel = {"withRelations": "true"}
+    job = client.folio_get("/data-import-profiles/jobProfiles/%s" % job_id,
+                           query_params=rel)
+    actions = [c for c in job.get("childProfiles", [])
+               if c.get("contentType") == "ACTION_PROFILE"]
+    if not actions:
+        return [], "the job profile has no action profile"
+    values = []
+    for act in actions:
+        full = client.folio_get("/data-import-profiles/actionProfiles/%s" % act["id"],
+                                query_params=rel)
+        maps = [c for c in full.get("childProfiles", [])
+                if c.get("contentType") == "MAPPING_PROFILE"]
+        if not maps:
+            return [], "an action profile has no mapping profile"
+        for m in maps:
+            fields = (m.get("content") or {}).get("mappingDetails", {}).get(
+                "mappingFields", [])
+            values += [f.get("value") for f in fields
+                       if f.get("path") == "order.po.workflowStatus"]
+    return values, None
+
+
+def check_pending(client, job_id, job_name):
+    """Orders must be loaded as Pending; anything else (e.g. Open) is an error."""
+    values, problem = mapping_status_values(client, job_id)
+    if problem:
+        return [(WARN, "tenant", "could not verify the PO status for job profile %r: %s"
+                 % (job_name, problem))]
+    if not values:
+        return [(WARN, "tenant", "job profile %r maps no PO status" % job_name)]
+    bad = sorted({v for v in values if v != '"Pending"'})
+    if bad:
+        return [(ERROR, "tenant", "job profile %r would load orders as %s, not \"Pending\""
+                 % (job_name, ", ".join(str(b) for b in bad)))]
+    return []
 
 
 def check_finance(client, recs):

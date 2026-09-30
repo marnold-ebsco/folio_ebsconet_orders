@@ -35,7 +35,8 @@ except pymarc / openpyxl / httpx.
   (title has package / collection / suite, or equals the package name) load without an
   ISSN. See "Open data decisions" in the README.
 - **Orders stay Pending.** The mapping profiles set `workflowStatus` to `"Pending"`;
-  no script opens an order. Budgets matter only for having an Active budget with the
+  no script opens an order, and the preflight check refuses to load with a job profile
+  whose mapping sets any other status. Budgets matter only for having an Active budget with the
   expense class attached (else lines are discarded), not for the amount.
 - **Data Import makes one PO per record**, so two SOP rows with the same order number
   cannot become two lines on one PO (the second fails). Preflight reports it.
@@ -57,11 +58,10 @@ record.
    confirm Data Import permissions.
 3. **Decide the data rules** listed in the README (no-ISSN rows, no-title-number rows,
    duplicate order numbers).
-4. **Preflight guard**: stop a load if the mapping profile's PO status is not Pending.
-5. **Unmapped MARC fields**: 980$r / $f / $c (Descriptor, Frequency, Cancellable) load
+4. **Unmapped MARC fields**: 980$r / $f / $c (Descriptor, Frequency, Cancellable) load
    into the MARC but map to no PO field.
-6. **Blank product ID**: Data Import leaves a blank entry on lines without a title number;
+5. **Blank product ID**: Data Import leaves a blank entry on lines without a title number;
    it is removed only when `folio_ongoing.py` converts the PO.
-7. **Test-tenant cleanup**: the 4 test POs, 9 profiles, 3 accounts and the `test_ebsconet_*`
+6. **Test-tenant cleanup**: the 4 test POs, 9 profiles, 3 accounts and the `test_ebsconet_*`
    finance / org / location records on bugfest (no cleanup script exists).
-8. Untested paths above (POL export, POL delete, non-S3 upload, Print record).
+7. Untested paths above (POL export, POL delete, non-S3 upload, Print record).
