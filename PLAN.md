@@ -70,7 +70,8 @@ retry helper, preflight on real files. Mock-tested only: the non-S3 upload path.
    confirm Data Import permissions.
 3. **Decide the remaining data rule**: repeated order numbers (handled by
    `folio_add_po_lines.py`, or suffixes). The "Usage Loading Service" lines (service fees,
-   not journals) currently load as orders; say if they should not.
+   not journals) currently load as orders; `rules.exclude_usage_loading_service` leaves
+   them out when you decide they should not.
 4. **Test-tenant cleanup**: `folio_cleanup_test_pos.py` removes the ~115 test POs; the
    9 profiles, 3 accounts and the `test_ebsconet_*` finance / org / location records on
    bugfest still have no cleanup script.

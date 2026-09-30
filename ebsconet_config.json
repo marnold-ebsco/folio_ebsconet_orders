@@ -29,6 +29,7 @@
     "cancellation_restriction": "Cancellation Restriction",
     "po_line_description": "PO Line Description"
   },
+  "usage_loading_service_prefix": "Usage Loading Service",
   "description_separator": "; ",
   "generated_id": {
     "_comment": "A line with neither an ISSN nor a title number gets this generated identifier (prefix + EBSCONET order number) in the title-number product ID, so every line carries an identifier.",
@@ -67,6 +68,7 @@
     "exclude_zero_cost_package_members": true,
     "exclude_zero_cost": true,
     "use_expense_classes": true,
+    "exclude_usage_loading_service": false,
     "skip_missing_issn": false,
     "exempt_costed_packages_from_issn_skip": true
   },

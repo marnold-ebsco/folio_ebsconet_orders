@@ -135,6 +135,12 @@ def is_package(row, cfg):
     return bool(re.search(pattern, title)) or (title != "" and title == name)
 
 
+def is_usage_loading_service(row, cfg):
+    """EBSCONET 'Usage Loading Service - <platform>' lines (service fees, not titles)."""
+    title = str(row.get(cfg["columns"]["title"]) or "").strip().lower()
+    return title.startswith(cfg["usage_loading_service_prefix"].lower())
+
+
 def classify(row, cfg):
     """Return (route, reason). route is None when the row is excluded."""
     c = cfg["columns"]
@@ -144,6 +150,8 @@ def classify(row, cfg):
         return None, "Excluded format: %s" % row.get(c["format"])
     if route is None:
         return None, "Unrecognized format: %s" % row.get(c["format"])
+    if rules.get("exclude_usage_loading_service") and is_usage_loading_service(row, cfg):
+        return None, "Usage Loading Service"
     cost = to_cost(row.get(c["cost"]))
     if cost is None:
         return None, "Unparseable cost: %s" % row.get(c["cost"])

@@ -90,6 +90,19 @@ def test_classify_zero_cost_package_member(cfg):
     assert prep.classify(row, cfg) == (None, "Package member at zero cost")
 
 
+def test_usage_loading_service_lines_load_by_default(cfg):
+    row = make_row(**{"Title Name": "Usage Loading Service - Ovid", "Total Cost": 125})
+    assert prep.classify(row, cfg) == ("online", "")
+
+
+def test_usage_loading_service_lines_can_be_excluded(cfg):
+    cfg["rules"]["exclude_usage_loading_service"] = True
+    row = make_row(**{"Title Name": "usage loading service - Ovid", "Total Cost": 125})
+    assert prep.classify(row, cfg) == (None, "Usage Loading Service")
+    other = make_row(**{"Title Name": "Journal of Usage Loading Services Research"})
+    assert prep.classify(other, cfg) == ("online", "")      # only titles that start with it
+
+
 def test_classify_zero_cost_excluded(cfg):
     assert prep.classify(make_row(**{"Total Cost": 0}), cfg) == (None, "Zero cost")
     assert prep.classify(make_row(Format="Print", **{"Total Cost": 0}), cfg)[1] == "Zero cost"

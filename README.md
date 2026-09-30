@@ -317,6 +317,7 @@ Other rules:
 
 | Situation | What happens | Where to change it |
 |---|---|---|
+| "Usage Loading Service - ..." lines (service fees, not titles; 15 with a cost in the sample, about $1,900) | **Loaded** for now. Set `rules.exclude_usage_loading_service` to `true` to leave them out: they are then logged in `out/prep_exclusions.csv` and the report as "Usage Loading Service". Matching is on titles that start with `usage_loading_service_prefix` | `rules.exclude_usage_loading_service` |
 | Zero-cost row | **Not loaded** ("Zero cost") | `rules.exclude_zero_cost` |
 | Zero-cost member of a package | **Not loaded** ("Package member at zero cost") | `rules.exclude_zero_cost_package_members` |
 | "Fee" format or unrecognized format | **Not loaded**, logged | `excluded_formats`, `format_routes` |
