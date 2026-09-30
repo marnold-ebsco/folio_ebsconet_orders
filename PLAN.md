@@ -26,6 +26,7 @@ except pymarc / openpyxl / httpx.
 | 7 | `folio_export_pols.py` | PO/POL numbers for the EBSCONET renewal integration (POL = PO + `-1`) |
 | - | `folio_delete_orders.py` | Remove problem Pending POs / lines from a CSV, with backups |
 | - | `folio_clean_product_ids.py` | Removes the empty product-ID rows Data Import creates when an ISSN or title number is missing (runs after each load) |
+| - | `folio_add_po_lines.py` | Adds records whose PO number is already taken as extra lines of that PO (Orders API), copying the PO's first line |
 | - | `folio_cleanup_test_pos.py` | Deletes the test POs listed in your local .mrc files (Pending, EBSCONET vendor only) from a **test** tenant |
 | - | `folio_test_data.py` | Creates test ledger / funds / budgets / classes / org / location on a **test** tenant |
 
@@ -44,10 +45,10 @@ except pymarc / openpyxl / httpx.
   expense class attached (else lines are discarded), not for the amount.
 - **Data Import makes one PO per record**, so two SOP rows with the same order number
   cannot become two lines on one PO. Tested live: the second record is discarded with
-  "PO Number already exists". Preflight reports it. If a future SOP needs multi-line
-  POs: load the first line by import and add the others through the Orders API (raise
-  the PO's line limit first; the profile sets it to 1), or give the repeated order
-  numbers distinct suffixes (which changes the POL numbers EBSCONET expects).
+  "PO Number already exists". Preflight reports it. For multi-line POs, load the first
+  line by import, then run `folio_add_po_lines.py` on the same file (tested live), or
+  give the repeated order numbers distinct suffixes (which changes the POL numbers
+  EBSCONET expects).
 - **Fund / expense class / organization are matched by code** (proven on bugfest).
 - **Extra line fields**: Descriptor + Frequency -> line Description; Cancellable
   (inverted) -> cancellation restriction. **Expense classes are optional**

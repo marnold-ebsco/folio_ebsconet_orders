@@ -78,6 +78,9 @@ Do a small trial first (a few records copied into a test .mrc), then the full fi
 - [ ] Fix the cause (audit log / preflight message; often a config value, a missing budget
       or expense class, or bad source data), regenerate the .mrc if the data changed, and
       load `out/retry/<file>_retry.mrc`.
+- [ ] Records discarded only because the PO number is already used (several lines on one
+      PO): after the first line has loaded, `folio_add_po_lines.py out/marc/<file>.mrc
+      --ini TENANT.ini` (dry run), then `--live`. See the README.
 - [ ] To remove orders that loaded wrongly: list them in `orders_to_delete.csv`
       (`PO,<number>` or `POL,<number>`) and run `folio_delete_orders.py` (dry run, then
       `--live`). Only **Pending** orders can be deleted this way.

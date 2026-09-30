@@ -250,6 +250,31 @@ Deleting a PO does not undo anything Data Import created outside the order (for 
 inventory records, if create-inventory was ever turned on). With the default of `None`
 nothing else is created.
 
+## Several lines on one PO (`folio_add_po_lines.py`)
+Data Import can only make one line per PO, so a record whose PO number is already taken
+is discarded. To put it on the existing PO as another line, run the same `.mrc` through:
+```
+.venv/bin/python folio_add_po_lines.py out/marc/<file>.mrc --ini my_tenant.ini          # dry run
+.venv/bin/python folio_add_po_lines.py out/marc/<file>.mrc --ini my_tenant.ini --live   # adds lines
+```
+For each record whose PO exists it POSTs a new line to `/orders/order-lines`: a copy of the
+PO's first line (so order format, receipt status, location, material type and acquisition
+method stay as the import profile set them) with the record's title, publisher, product
+IDs, subscription dates, price, fund / expense class, vendor account, access provider,
+URL, description and cancellation restriction swapped in. Only Pending POs are touched; a
+record whose title is already on the PO is skipped, so re-running adds nothing; the
+tenant's lines-per-PO limit (`poLines-limit`) is checked first. Skips are explained in
+the output and in `out/add_lines_log.csv` (`no-po`: load it normally; `limit`: raise the
+tenant setting first). New lines are numbered `<PO>-2`, `-3`... (FOLIO never reuses a
+deleted line number). Undo a line with `folio_delete_orders.py` (`POL,<po>-<n>`).
+The value mapping mirrors `folio_setup.py`; change both together. Note that
+`folio_export_pols.py` flags these extra lines (`NO - line N`) because EBSCONET is told
+POL = PO + `-1`.
+
+Tested on bugfest: PO `TMULTI01` got its second line (`TMULTI01-3`), with the right
+price, fund, account, description, cancellation restriction and product IDs; a re-run added
+nothing.
+
 ## Cleaning up a TEST tenant (`folio_cleanup_test_pos.py`)
 ```
 .venv/bin/python folio_cleanup_test_pos.py --ini sunflower_bugfest.ini            # dry run
