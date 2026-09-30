@@ -115,6 +115,9 @@ def build_mapping_profile(route, template, cfg, vendor_id, name_prefix=None):
     set_value(fields, POL + "receiptStatus", q(fo["receipt_status"][route]))
     set_value(fields, POL + "source", q("MARC"))
     set_value(fields, POL + "checkinItems", q("true"))      # Independent receiving
+    # Descriptor + Frequency text, and the inverted Cancellable flag (built by prep)
+    set_value(fields, POL + "description", "980$d")
+    set_value(fields, POL + "cancellationRestriction", "980$k")
 
     # --- vendor / cost / fund distribution
     set_value(fields, POL + "vendorDetail.vendorAccount", "990$a")

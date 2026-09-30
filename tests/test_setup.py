@@ -58,6 +58,8 @@ def test_common_po_and_pol_values(route, cfg):
     assert f["order.poLine.acquisitionMethod"]["value"] == '"Purchase At Vendor System"'
     assert f["order.poLine.checkinItems"]["value"] == '"true"'
     assert f["order.poLine.vendorDetail.vendorAccount"]["value"] == "990$a"
+    assert f["order.poLine.description"]["value"] == "980$d"
+    assert f["order.poLine.cancellationRestriction"]["value"] == "980$k"
     assert sub(f["order.poLine.details.productIds[]"]) == [
         {"productId": "020$a", "qualifier": "", "productIdType": '"ISSN"'},
         {"productId": "990$i", "qualifier": "", "productIdType": "990$j"}]

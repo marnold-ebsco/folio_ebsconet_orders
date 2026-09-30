@@ -21,6 +21,7 @@ from folio_setup import ROUTE_LABEL
 
 ERROR, WARN = "ERROR", "WARN"
 URL_OK = re.compile(r"^[a-z][a-z0-9+.\-]*://\S+$")
+PO_OK = re.compile(r"^[A-Za-z0-9]{1,22}$")
 ISSN_OK = re.compile(r"^\d{4}-\d{3}[\dXx]$")
 SUBFIELDS = {"o": "order", "c": "cost", "f": "fund", "e": "expense_class",
              "a": "account", "s": "start", "t": "end", "v": "org", "i": "title_number"}
@@ -63,12 +64,15 @@ def check_records(recs, route):
     for rec in recs:
         where = label(rec)
         for key, human in (("title", "245$a title"), ("order", "990$o PO number"),
-                           ("fund", "990$f fund"), ("expense_class", "990$e expense class"),
+                           ("fund", "990$f fund"),
                            ("account", "990$a vendor account")):
             if not rec[key]:
                 issues.append((ERROR, where, "missing %s" % human))
         if needs_org and not rec["org"]:
             issues.append((ERROR, where, "missing 990$v access provider"))
+        if rec["order"] and not PO_OK.match(rec["order"]):
+            issues.append((ERROR, where, "PO number %r must be 1-22 letters/digits "
+                           "(FOLIO rejects other characters)" % rec["order"]))
         try:
             cost = float(rec["cost"])
             if cost <= 0:

@@ -44,6 +44,28 @@ def test_enrich_normalizes_url(cfg):
     assert out["URL"] == "http://www.x.org"
 
 
+def test_cancellation_restriction_is_inverted():
+    assert prep.cancellation_restriction("Yes") == "false"
+    assert prep.cancellation_restriction(" no ") == "true"
+    assert prep.cancellation_restriction(None) == ""
+    assert prep.cancellation_restriction("maybe") == ""
+
+
+def test_line_description():
+    both = prep.line_description("Site License", "Monthly (8-14 issues)", "; ")
+    assert both == "Site License; Monthly (8-14 issues)"
+    assert prep.line_description(None, "Monthly", "; ") == "Monthly"
+    assert prep.line_description("Single Site", "Not Applicable", "; ") == "Single Site"
+    assert prep.line_description("", "not applicable", "; ") == ""
+
+
+def test_enrich_adds_description_and_restriction(cfg):
+    out, _ = prep.enrich(make_row(Cancellable="No", Descriptor="Single Site",
+                                  Frequency="Quarterly (4 issues)"), "online", cfg)
+    assert out["Cancellation Restriction"] == "true"
+    assert out["PO Line Description"] == "Single Site; Quarterly (4 issues)"
+
+
 def test_to_iso():
     assert prep.to_iso("01/02/2026") == "2026-01-02"
     assert prep.to_iso("2026-01-02") == "2026-01-02"
@@ -122,6 +144,12 @@ def test_enrich_adds_columns_and_iso_dates(cfg):
     blank_tn, _ = prep.enrich(make_row(**{"Publisher Product Code": ""}), "print", cfg)
     assert blank_tn["Title Number"] == "" and blank_tn["Title Number Type"] == ""
     assert warn == []
+
+
+def test_expense_classes_can_be_switched_off(cfg):
+    cfg["rules"]["use_expense_classes"] = False
+    out, _ = prep.enrich(make_row(), "print", cfg)
+    assert out["FOLIO Expense Class"] == ""
 
 
 def test_enrich_bad_date_warns(cfg):

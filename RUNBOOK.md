@@ -22,6 +22,8 @@ copy of `sample.ini`. Nothing writes to FOLIO unless a step says `--live`.
 - [ ] Note the ledger's "Restrict encumbrance" and the budgets' allowable-encumbrance
       %: they decide whether the orders can be *opened* later.
 - [ ] Your user can create Data Import profiles, run imports, and create/edit orders.
+- [ ] Expense classes are optional: set `rules.use_expense_classes` to `false` if the
+      tenant does not use them.
 - [ ] Edit `ebsconet_config.json`: fund per route (`fund_by_route`), expense classes
       (`expense_class_by_subject`, `default_expense_class`), `default_org` /
       `org_by_publisher`, and the `folio` section (location, material type, vendor org,

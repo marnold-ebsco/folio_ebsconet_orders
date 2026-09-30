@@ -82,6 +82,21 @@ def normalize_url(value):
                        parts.query, parts.fragment))
 
 
+def cancellation_restriction(cancellable):
+    """SOP 'Cancellable' Yes/No -> FOLIO cancellationRestriction (inverted): a title
+    that is not cancellable is restricted. Anything else is left blank."""
+    text = str(cancellable or "").strip().lower()
+    return {"yes": "false", "no": "true"}.get(text, "")
+
+
+def line_description(descriptor, frequency, separator):
+    """Descriptor and Frequency joined into one line description; empty values and
+    'Not Applicable' are left out."""
+    parts = [str(v).strip() for v in (descriptor, frequency)
+             if not blank(v) and str(v).strip().lower() != "not applicable"]
+    return separator.join(parts)
+
+
 def to_cost(value):
     if value is None or value == "":
         return 0.0
@@ -159,9 +174,14 @@ def enrich(row, route, cfg):
             out[col] = iso
     if c["url"] in out:
         out[c["url"]] = normalize_url(out[c["url"]])
+    out[a["cancellation_restriction"]] = cancellation_restriction(
+        row.get(c["cancellable"]))
+    out[a["po_line_description"]] = line_description(
+        row.get(c["descriptor"]), row.get(c["frequency"]), cfg["description_separator"])
     out[a["fund"]] = cfg["fund_by_route"][route]
-    out[a["expense_class"]] = cfg["expense_class_by_subject"].get(
+    out[a["expense_class"]] = (cfg["expense_class_by_subject"].get(
         str(row.get(c["subject"]) or "").strip(), cfg["default_expense_class"])
+        if cfg["rules"].get("use_expense_classes", True) else "")
     out[a["org"]] = cfg["org_by_publisher"].get(
         str(row.get(c["publisher"]) or "").strip(), cfg["default_org"])
     out[a["package_flag"]] = "Yes" if is_package(row, cfg) else "No"

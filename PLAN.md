@@ -43,6 +43,9 @@ except pymarc / openpyxl / httpx.
 - **Data Import makes one PO per record**, so two SOP rows with the same order number
   cannot become two lines on one PO (the second fails). Preflight reports it.
 - **Fund / expense class / organization are matched by code** (proven on bugfest).
+- **Extra line fields**: Descriptor + Frequency -> line Description; Cancellable
+  (inverted) -> cancellation restriction. **Expense classes are optional**
+  (`rules.use_expense_classes`).
 - **Independent receiving** = `checkinItems: true`; create-inventory = None.
 - Anonymized test spreadsheet (`TestEBSCOnet_adjusted.xlsx`, not in the repo).
 
@@ -60,10 +63,8 @@ retry helper, preflight on real files. Mock-tested only: the non-S3 upload path.
    confirm Data Import permissions.
 3. **Decide the data rules** listed in the README (no-ISSN rows, no-title-number rows,
    duplicate order numbers).
-4. **Unmapped MARC fields**: 980$r / $f / $c (Descriptor, Frequency, Cancellable) load
-   into the MARC but map to no PO field.
-5. **Blank product ID**: Data Import leaves a blank entry on lines without a title number;
+4. **Blank product ID**: Data Import leaves a blank entry on lines without a title number;
    it is removed only when `folio_ongoing.py` converts the PO.
-6. **Test-tenant cleanup**: the 4 test POs, 9 profiles, 3 accounts and the `test_ebsconet_*`
+5. **Test-tenant cleanup**: the ~115 test POs, 9 profiles, 3 accounts and the `test_ebsconet_*`
    finance / org / location records on bugfest (no cleanup script exists).
-7. Untested path: the non-S3 upload (only matters if the real tenant has file splitting off).
+6. Untested path: the non-S3 upload (only matters if the real tenant has file splitting off).

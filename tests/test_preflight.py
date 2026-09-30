@@ -36,10 +36,14 @@ def test_clean_record_has_no_errors():
 
 @pytest.mark.parametrize("field,expect", [
     ("title", "245$a"), ("order", "990$o"), ("fund", "990$f"),
-    ("expense_class", "990$e"), ("account", "990$a"), ("org", "990$v")])
+    ("account", "990$a"), ("org", "990$v")])
 def test_missing_required_values(field, expect):
     errs = messages(pf.check_records([rec(**{field: ""})], "online"), pf.ERROR)
     assert any(expect in m for m in errs)
+
+
+def test_expense_class_is_optional():
+    assert pf.check_records([rec(expense_class="")], "online") == []
 
 
 def test_access_provider_not_needed_for_print():
@@ -61,6 +65,13 @@ def test_warnings_for_issn_title_number_and_zero_price():
     assert len(warns) == 3
     assert any("ISSN" in m for m in messages(pf.check_records(
         [rec(issn="12345678")], "online"), pf.WARN))
+
+
+@pytest.mark.parametrize("po,ok", [("U1234567", True), ("A" * 22, True), ("A" * 23, False),
+                                   ("TCANC-NO", False), ("U 1", False), ("Ué", False)])
+def test_po_number_format(po, ok):
+    errs = messages(pf.check_records([rec(order=po)], "online"), pf.ERROR)
+    assert (not any("PO number" in m and "letters/digits" in m for m in errs)) == ok
 
 
 def test_duplicate_po_numbers_in_file():
@@ -197,6 +208,13 @@ def test_fund_missing_or_inactive(cfg):
 def test_no_active_budget(cfg):
     errs, _ = tenant_errors(cfg, budgets=[{"id": "b1", "budgetStatus": "Frozen"}])
     assert any("no Active budget" in m for m in errs)
+
+
+def test_no_expense_class_skips_the_budget_class_check(cfg):
+    errs, _ = tenant_errors(cfg, recs=[rec(expense_class="")],
+                            budget_detail={"allocated": 1000, "statusExpenseClasses": []},
+                            expenseClasses={})
+    assert errs == []
 
 
 def test_expense_class_missing_or_not_in_budget(cfg):

@@ -118,10 +118,21 @@ create-inventory, payment method for new accounts).
 Known limitations / things to verify on the first real import:
 - Data Import creates one PO per MARC record, so a second SOP line with an already used
   PO number (one such order in the sample) will probably fail as a duplicate.
-- 980$r/$f/$c (Descriptor, Frequency, Cancellable) are in the MARC but not mapped to
-  any PO field; 264$a is used for the publisher (not 260$a).
-- Whether the import accepts fund/expense class/access provider by code (as in the
-  instructions) has not been proven; check the first job log.
+- 264$a is used for the publisher (not 260$a).
+- Fund, expense class and access provider ARE accepted by code (proven on bugfest).
+
+Extra PO line fields (proven on bugfest): `ebsconet_prep.py` adds two columns that the
+MARC carries as 980$d and 980$k. **Descriptor + Frequency** are joined (`"Site License;
+Monthly (8-14 issues)"`; empty values and "Not Applicable" are dropped, separator is
+`description_separator` in the config) and mapped to the PO line **Description**
+(`description`). **Cancellable** is inverted (SOP "No" -> `cancellationRestriction` true,
+"Yes" -> false) and mapped to the line's cancellation restriction. The raw 980$r / $f / $c
+values also stay in the MARC record.
+
+**Expense classes are optional.** Set `rules.use_expense_classes` to `false` in the config
+(or leave a value blank) and no 990$e is written; the line's fund distribution then has
+no expense class. Preflight does not require one, and only checks a class against the
+budget when the record has one. The fund still needs an Active budget.
 
 ## Step 5: load a .mrc (`folio_import.py`)
 ```
@@ -149,7 +160,8 @@ stops it on any error (`--skip-preflight` overrides). It can also be run alone:
 ```
 It reads only; nothing is written. Findings are ERROR (the load would fail or discard
 lines) or WARN, grouped by type. Checks:
-- File: missing title / PO number / fund / expense class / account / access provider;
+- File: missing title / PO number / fund / account / access provider; PO number not
+  1-22 letters or digits (FOLIO rejects hyphens etc.);
   price not a number; dates not ISO or end before start; URL FOLIO would reject; ISSN
   format; missing title number; duplicate PO numbers or 001s inside the file.
 - Tenant: job profile exists **and its mapping profile loads orders as "Pending"** (an

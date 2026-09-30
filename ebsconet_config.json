@@ -13,6 +13,9 @@
     "subject": "Subject Category",
     "order_number": "Order Number",
     "url": "URL",
+    "cancellable": "Cancellable",
+    "descriptor": "Descriptor",
+    "frequency": "Frequency",
     "title_number_source": "Publisher Product Code"
   },
   "added_columns": {
@@ -21,14 +24,19 @@
     "org": "FOLIO Org",
     "package_flag": "Package?",
     "title_number": "Title Number",
-    "title_number_type": "Title Number Type"
+    "title_number_type": "Title Number Type",
+    "cancellation_restriction": "Cancellation Restriction",
+    "po_line_description": "PO Line Description"
   },
+  "description_separator": "; ",
   "extra_marc_map": {
     "FOLIO Fund": "990$f",
     "FOLIO Expense Class": "990$e",
     "FOLIO Org": "990$v",
     "Title Number": "990$i",
-    "Title Number Type": "990$j"
+    "Title Number Type": "990$j",
+    "Cancellation Restriction": "980$k",
+    "PO Line Description": "980$d"
   },
   "marc_indicators": {
     "245": ["0", "0"],
@@ -52,6 +60,7 @@
   "rules": {
     "exclude_zero_cost_package_members": true,
     "exclude_zero_cost": true,
+    "use_expense_classes": true,
     "skip_missing_issn": true,
     "exempt_costed_packages_from_issn_skip": true
   },
