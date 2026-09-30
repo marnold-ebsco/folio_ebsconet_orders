@@ -30,6 +30,7 @@ goes to the customer.
 | root `folio_retry_failed.py`, `folio_delete_orders.py`, `folio_add_po_lines.py` | fix-up tools you run yourself when something goes wrong |
 | root `folio_cleanup_test_pos.py`, `folio_test_data.py` | for test tenants only |
 | `ebsconet_config.json`, `order_marc_headers.xlsx`, `template_profiles/` | settings, tag map, exported profile templates |
+| `docs/CLIENT_GUIDE.md` | the plain-language explanation to give a client: what we need from them, in what order, the choices they make, and the ongoing-order conversion |
 
 The per-step sections below describe each step's behavior and options. Their commands use
 `python -m pipeline.<step>`; in normal use the `ebsconet.py` commands above run them.
