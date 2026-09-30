@@ -37,6 +37,8 @@ copy of `sample.ini`. Nothing writes to FOLIO unless a step says `--live`.
 - [ ] Read `out/prep_report.txt`: row counts per route, exclusions by reason, and the
       **"Removed rows with a non-zero cost"** list (money that will not be loaded).
 - [ ] Skim `out/prep_exclusions.csv`; confirm nothing important was dropped.
+- [ ] Skim `out/prep_no_issn.csv`: rows loaded without an ISSN. Rows with a generated
+      identifier (`NOISSN-...`) have neither an ISSN nor a title number.
 - [ ] Open the three `out/library-EBSCONET_*.xlsx` workbooks; check the yellow mapped
       columns and the added FOLIO Fund / Expense Class / Org columns look right.
 - [ ] `.venv/bin/python ebsconet_to_marc.py`  (writes `out/marc/*.mrc` and `.mrk`; open a

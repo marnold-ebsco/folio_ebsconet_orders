@@ -43,9 +43,8 @@ Outputs: `out/library-EBSCONET_*.xlsx`, `out/prep_report.txt`,
 An empty split (for example print, when every print row is $0) produces no MARC file.
 
 Row rules (config `rules` and `package_title_keywords`): zero-cost rows are removed;
-package members at $0 are removed; rows with no ISSN are removed unless they are a
-package purchase (title contains package/collection/suite, or equals the package
-name); "Fee" and unrecognized formats are removed.
+package members at $0 are removed; "Fee" and unrecognized formats are removed. Rows
+with no ISSN are **loaded** and listed in `out/prep_no_issn.csv` (see below).
 
 ## Step 3a: convert POs to ongoing orders (`folio_ongoing.py`)
 ```
@@ -293,16 +292,31 @@ Never point it at a production tenant.
 `tenant_id`, `username`, `password`, `sslVerify`). These hold live credentials: keep
 them out of version control and out of this folder's shared copies.
 
-## Open data decisions (current behavior, deliberately left as is)
+## Data rules (current behavior)
 Which rows load is decided in `ebsconet_prep.py` from the `rules` in
-`ebsconet_config.json`. The preferred approach is not settled; today's behavior:
+`ebsconet_config.json`.
 
-| Situation | What happens now | Where to change it |
+**Every row is loaded; a row without an ISSN is logged, not skipped.** `rules.skip_missing_issn`
+is `false`. The prep step writes `out/prep_no_issn.csv` (sheet row, order number, title,
+cost, route, identifier used, whether it was generated) and a line in `out/prep_report.txt`,
+and the preflight check warns "no ISSN". The identifiers a line gets:
+
+| Situation | Product IDs on the line |
+|---|---|
+| ISSN and title number | both (ISSN, then `Publisher or distributor number`) |
+| ISSN, no title number | the ISSN only |
+| **No ISSN, has a title number** | the title number only (the empty ISSN row is removed after the load) |
+| **No ISSN and no title number** | a **generated** identifier `NOISSN-<EBSCONET order number>` of type `Local identifier` (`generated_id` in the config; flagged in the prep workbook's "Generated ID?" column and in `prep_no_issn.csv`). It is unique and reproducible, and is not an ISSN. |
+
+The generated identifier also means a package row with no ISSN now has one product ID
+instead of none. The `Local identifier` type must exist on the tenant (preflight checks).
+Tested on bugfest: a journal with a real title number, a journal with neither, and a
+"Usage Loading Service" line all loaded with exactly one product ID.
+
+Other rules:
+
+| Situation | What happens | Where to change it |
 |---|---|---|
-| Single journal, no ISSN | **Not loaded.** Logged in `out/prep_exclusions.csv` ("Missing ISSN") and listed in `out/prep_report.txt` when it has a cost (29 rows in the sample, e.g. "Chem", "Library Journal", "Usage Loading Service" lines) | `rules.skip_missing_issn` |
-| Package row (title has package / collection / suite, or equals its package name), no ISSN | **Loaded** without 020$a (10 rows in the sample); logged as a warning | `rules.exempt_costed_packages_from_issn_skip`, `package_title_keywords` |
-| No title number (990$i) | **Loaded.** The PO line just has the ISSN product ID. 26 of 111 sample rows. Data Import leaves a blank product-ID entry, removed by `folio_ongoing.py` | title number comes from `columns.title_number_source` (`Publisher Product Code`) |
-| No ISSN and no title number | Loaded (only package rows; 9 in the sample). The line has no product IDs, so it cannot be matched later by ISSN or title number | as above |
 | Zero-cost row | **Not loaded** ("Zero cost") | `rules.exclude_zero_cost` |
 | Zero-cost member of a package | **Not loaded** ("Package member at zero cost") | `rules.exclude_zero_cost_package_members` |
 | "Fee" format or unrecognized format | **Not loaded**, logged | `excluded_formats`, `format_routes` |

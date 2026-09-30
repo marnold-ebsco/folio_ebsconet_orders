@@ -187,10 +187,17 @@ def enrich(row, route, cfg):
     out[a["package_flag"]] = "Yes" if is_package(row, cfg) else "No"
     tn = row.get(c["title_number_source"])
     out[a["title_number"]] = "" if blank(tn) else str(tn).strip()
-    # The ID type travels in the MARC (990$j) only when there is a title number, so
-    # the import does not create an empty product-ID row for records without one.
+    out[a["generated_id"]] = "No"
     out[a["title_number_type"]] = ("" if blank(tn)
                                    else cfg["folio"]["title_number_type"])
+    # No ISSN and no title number: generate an identifier from the EBSCONET order number
+    # so the line still carries one (it goes in the title-number product ID).
+    order = row.get(c["order_number"])
+    if blank(tn) and blank(row.get(c["issn"])) and not blank(order):
+        gen = cfg["generated_id"]
+        out[a["title_number"]] = gen["prefix"] + str(order).strip()
+        out[a["title_number_type"]] = gen["type"]
+        out[a["generated_id"]] = "Yes"
     return out, warnings
 
 
@@ -219,6 +226,7 @@ def prepare(input_path, out_dir, cfg, headers_file=None):
     highlight.add(cfg["columns"]["format"])
 
     routed = {r: [] for r in ROUTES}
+    no_issn = []
     exclusions = []
     warnings = []
     for row in rows:
@@ -228,9 +236,12 @@ def prepare(input_path, out_dir, cfg, headers_file=None):
             continue
         new, warn = enrich(row, route, cfg)
         warnings.extend(warn)
-        if blank(row.get(cfg["columns"]["issn"])) and is_package(row, cfg):
-            warnings.append("row %s: costed package '%s' has no ISSN (loads without 020)"
-                            % (row["_row"], row.get(cfg["columns"]["title"])))
+        if blank(row.get(cfg["columns"]["issn"])):
+            no_issn.append((row["_row"], new.get(cfg["columns"]["order_number"]),
+                            row.get(cfg["columns"]["title"]),
+                            to_cost(row.get(cfg["columns"]["cost"])), route,
+                            new[cfg["added_columns"]["title_number"]],
+                            new[cfg["added_columns"]["generated_id"]]))
         routed[route].append(new)
 
     for route in ROUTES:
@@ -244,6 +255,12 @@ def prepare(input_path, out_dir, cfg, headers_file=None):
         w.writerows(exclusions)
 
     by_row = {r["_row"]: to_cost(r.get(cfg["columns"]["cost"])) for r in rows}
+    with open(out_dir / "prep_no_issn.csv", "w", newline="", encoding="utf-8") as fh:
+        w = csv.writer(fh)
+        w.writerow(["sheet_row", "order_number", "title", "cost", "route",
+                    "identifier_used", "identifier_generated"])
+        w.writerows(no_issn)
+
     order_col = cfg["columns"]["order_number"]
     counts = Counter(r.get(order_col) for rs in routed.values() for r in rs)
     dupes = sorted(k for k, v in counts.items() if v > 1 and k)
@@ -261,6 +278,10 @@ def prepare(input_path, out_dir, cfg, headers_file=None):
     lines.append("Removed rows with a non-zero cost (review): %d" % len(costed))
     lines += ["  row %s: %s -- %s (cost %s)" % (r, t, why, by_row[r])
               for r, t, why in costed]
+    lines.append("Rows loaded WITHOUT an ISSN (see prep_no_issn.csv): %d (%d with a real "
+                 "title number, %d with a generated identifier)" % (
+                     len(no_issn), sum(1 for r in no_issn if r[6] == "No" and r[5]),
+                     sum(1 for r in no_issn if r[6] == "Yes")))
     lines.append("Order numbers on more than one line (kept as multi-line POs): %s"
                  % (", ".join(map(str, dupes)) or "none"))
     lines.append("Warnings: %d" % len(warnings))

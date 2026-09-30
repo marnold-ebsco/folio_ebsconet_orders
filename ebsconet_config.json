@@ -23,12 +23,18 @@
     "expense_class": "FOLIO Expense Class",
     "org": "FOLIO Org",
     "package_flag": "Package?",
+    "generated_id": "Generated ID?",
     "title_number": "Title Number",
     "title_number_type": "Title Number Type",
     "cancellation_restriction": "Cancellation Restriction",
     "po_line_description": "PO Line Description"
   },
   "description_separator": "; ",
+  "generated_id": {
+    "_comment": "A line with neither an ISSN nor a title number gets this generated identifier (prefix + EBSCONET order number) in the title-number product ID, so every line carries an identifier.",
+    "prefix": "NOISSN-",
+    "type": "Local identifier"
+  },
   "extra_marc_map": {
     "FOLIO Fund": "990$f",
     "FOLIO Expense Class": "990$e",
@@ -61,7 +67,7 @@
     "exclude_zero_cost_package_members": true,
     "exclude_zero_cost": true,
     "use_expense_classes": true,
-    "skip_missing_issn": true,
+    "skip_missing_issn": false,
     "exempt_costed_packages_from_issn_skip": true
   },
   "ongoing": {

@@ -20,7 +20,8 @@ def rec(**over):
     d = {"n": 1, "id": "U1", "title": "T", "issn": "1234-5678",
          "url": "https://x.org/a", "order": "U1", "cost": "10.00", "fund": "F1",
          "expense_class": "GEN", "account": "ACC1", "start": "2026-01-01",
-         "end": "2026-12-31", "org": "EBSCO", "title_number": "P1"}
+         "end": "2026-12-31", "org": "EBSCO", "title_number": "P1",
+         "title_number_type": ""}
     d.update(over)
     return d
 
@@ -118,6 +119,7 @@ class FakeTenant:
                               "statusExpenseClasses": [{"expenseClassId": "ec1",
                                                         "status": "Active"}]},
             "expenseClasses": {"GEN": {"id": "ec1"}},
+            "identifierTypes": ["ISSN", "Local identifier", "Publisher or distributor number"],
             "status": '"Pending"',
         }
         self.data.update(kw)
@@ -155,6 +157,8 @@ class FakeTenant:
             return [d["funds"][val]] if val in d["funds"] else []
         if key == "budgets":
             return d["budgets"]
+        if key == "identifierTypes":
+            return [{}] if val in d["identifierTypes"] else []
         if key == "expenseClasses":
             return [d["expenseClasses"][val]] if val in d["expenseClasses"] else []
         raise AssertionError((path, key, query))
@@ -284,6 +288,16 @@ def test_unverifiable_status_is_warning_not_error(cfg):
     assert errs == [] and any("could not verify" in m for m in warns)
     errs, warns = tenant_errors(cfg, action={"childProfiles": []})
     assert errs == [] and any("no mapping profile" in m for m in warns)
+
+
+def test_missing_product_id_type_is_an_error(cfg):
+    recs = [rec(title_number_type="Local identifier")]
+    errs, _ = tenant_errors(cfg, recs=recs,
+                            identifierTypes=["ISSN", "Publisher or distributor number"])
+    assert any("'Local identifier' not found" in m for m in errs)
+    errs, _ = tenant_errors(cfg, identifierTypes=[])
+    assert any("'ISSN' not found" in m for m in errs)
+    assert tenant_errors(cfg, recs=recs) == ([], [])
 
 
 def test_acquisition_method_missing(cfg):

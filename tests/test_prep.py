@@ -112,16 +112,35 @@ def test_is_package_only_when_title_says_or_matches(cfg):
     assert prep.is_package_member(member, cfg)
 
 
-def test_costed_single_journal_without_issn_removed_even_if_in_package(cfg):
+def test_no_issn_rows_are_loaded_by_default(cfg):
+    assert prep.classify(make_row(ISSN=""), cfg) == ("online", "")
+    row = make_row(ISSN="", **{"Title Name": "Chem", "Publisher Package": "Cell Press"})
+    assert prep.classify(row, cfg) == ("online", "")
+
+
+def test_skip_missing_issn_rule_still_works_when_switched_on(cfg):
+    cfg["rules"]["skip_missing_issn"] = True
+    assert prep.classify(make_row(ISSN=""), cfg) == (None, "Missing ISSN")
     row = make_row(ISSN="", **{"Title Name": "Chem", "Publisher Package": "Cell Press"})
     assert prep.classify(row, cfg) == (None, "Missing ISSN")
 
 
-def test_classify_missing_issn_skipped(cfg):
-    assert prep.classify(make_row(ISSN=""), cfg) == (None, "Missing ISSN")
+def test_generated_identifier_only_when_no_issn_and_no_title_number(cfg):
+    plain, _ = prep.enrich(make_row(), "online", cfg)
+    assert plain["Generated ID?"] == "No" and plain["Title Number"] == "P1"
+    no_issn, _ = prep.enrich(make_row(ISSN=""), "online", cfg)
+    assert no_issn["Title Number"] == "P1" and no_issn["Generated ID?"] == "No"
+    neither, _ = prep.enrich(make_row(ISSN="", **{"Publisher Product Code": ""}),
+                             "online", cfg)
+    assert neither["Title Number"] == "NOISSN-U1"
+    assert neither["Title Number Type"] == "Local identifier"
+    assert neither["Generated ID?"] == "Yes"
+    has_issn, _ = prep.enrich(make_row(**{"Publisher Product Code": ""}), "online", cfg)
+    assert has_issn["Title Number"] == "" and has_issn["Generated ID?"] == "No"
 
 
 def test_classify_costed_package_exempt_from_issn_skip(cfg):
+    cfg["rules"]["skip_missing_issn"] = True
     row = make_row(ISSN="", **{"Title Name": "AAAS Journals Package",
                                "Publisher Package": "AAAS Journals Package"})
     assert prep.classify(row, cfg)[0] == "online"
@@ -164,7 +183,7 @@ def test_prepare_end_to_end(cfg, tmp_path):
         make_row(Format="Print", **{"Order Number": "B"}),
         make_row(Format="Online + Print", **{"Order Number": "C"}),
         make_row(Format="Fee"),
-        make_row(ISSN=""),
+        make_row(ISSN="", **{"Order Number": "D"}),
         make_row(**{"Total Cost": 0, "Publisher Package": "X"}),
     ]
     src = tmp_path / "sop.xlsx"
@@ -184,13 +203,18 @@ def test_prepare_end_to_end(cfg, tmp_path):
 
     summary = prep.prepare(src, tmp_path / "out", cfg, hdr)
     assert summary["read"] == 7
-    assert summary["routed"] == {"online": 2, "print": 1, "pe": 1}
-    assert summary["excluded"] == 3
+    assert summary["routed"] == {"online": 3, "print": 1, "pe": 1}
+    assert summary["excluded"] == 2            # the Fee row and the zero-cost package member
     assert summary["duplicate_orders"] == ["A"]
+
+    no_issn = (tmp_path / "out" / "prep_no_issn.csv").read_text(encoding="utf-8")
+    assert "D" in no_issn and no_issn.count("\n") == 2       # header + the one no-ISSN row
+    report = (tmp_path / "out" / "prep_report.txt").read_text(encoding="utf-8")
+    assert "WITHOUT an ISSN" in report
 
     out = load_workbook(tmp_path / "out" / cfg["output_names"]["online"])
     ws = out.active
-    assert ws.max_row == 3
+    assert ws.max_row == 4
     assert ws["A1"].fill.start_color.rgb.endswith("FFFF00")   # mapped column
     assert ws["A3"].fill.start_color.rgb.endswith("FFFF00")   # last data row too
     assert ws["B1"].fill.fill_type is None                     # unmapped column

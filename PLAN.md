@@ -36,9 +36,9 @@ except pymarc / openpyxl / httpx.
   Added by prep: 990$f fund, 990$e expense class, 990$v access provider, 990$i title
   number (= `Publisher Product Code`), 990$j title-number type.
 - **Zero-cost rows are not loaded**; package members at $0, "Fee" and unrecognized
-  formats are not loaded; single journals with no ISSN are not loaded; package rows
-  (title has package / collection / suite, or equals the package name) load without an
-  ISSN. See "Open data decisions" in the README.
+  formats are not loaded. **Every other row is loaded; rows without an ISSN are logged**
+  (`out/prep_no_issn.csv`). A row with neither an ISSN nor a title number gets a generated
+  product ID `NOISSN-<order number>` (type Local identifier). See "Data rules" in the README.
 - **Orders stay Pending.** The mapping profiles set `workflowStatus` to `"Pending"`;
   no script opens an order, and the preflight check refuses to load with a job profile
   whose mapping sets any other status. Budgets matter only for having an Active budget with the
@@ -68,8 +68,9 @@ retry helper, preflight on real files. Mock-tested only: the non-S3 upload path.
 2. **Real tenant**: run `folio_preflight.py` first; check ledger "Restrict encumbrance" and
    budget allowable-encumbrance settings (they decide whether orders can later be opened);
    confirm Data Import permissions.
-3. **Decide the data rules** listed in the README (no-ISSN rows, no-title-number rows,
-   duplicate order numbers).
+3. **Decide the remaining data rule**: repeated order numbers (handled by
+   `folio_add_po_lines.py`, or suffixes). The "Usage Loading Service" lines (service fees,
+   not journals) currently load as orders; say if they should not.
 4. **Test-tenant cleanup**: `folio_cleanup_test_pos.py` removes the ~115 test POs; the
    9 profiles, 3 accounts and the `test_ebsconet_*` finance / org / location records on
    bugfest still have no cleanup script.

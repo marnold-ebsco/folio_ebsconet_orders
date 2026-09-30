@@ -25,7 +25,8 @@ URL_OK = re.compile(r"^[a-z][a-z0-9+.\-]*://\S+$")
 PO_OK = re.compile(r"^[A-Za-z0-9]{1,22}$")
 ISSN_OK = re.compile(r"^\d{4}-\d{3}[\dXx]$")
 SUBFIELDS = {"o": "order", "c": "cost", "f": "fund", "e": "expense_class",
-             "a": "account", "s": "start", "t": "end", "v": "org", "i": "title_number"}
+             "a": "account", "s": "start", "t": "end", "v": "org", "i": "title_number",
+             "j": "title_number_type"}
 
 
 def read_records(mrc_path):
@@ -179,6 +180,12 @@ def check_tenant(client, recs, route, cfg, job_profile=None):
                "value==%s" % q(fo["acquisition_method"])):
         issues.append((ERROR, "tenant", "acquisition method %r not found"
                        % fo["acquisition_method"]))
+
+    id_types = {"ISSN"} | {r["title_number_type"] for r in recs if r["title_number_type"]}
+    for name in sorted(id_types):
+        if not one(client, "/identifier-types", "identifierTypes", "name==%s" % q(name)):
+            issues.append((ERROR, "tenant", "product ID type %r not found; the import "
+                           "would leave the product ID without a type" % name))
 
     issues += check_finance(client, recs)
     return issues
