@@ -25,6 +25,7 @@ except pymarc / openpyxl / httpx.
 | - | `folio_retry_failed.py` | After a partial load: retry .mrc for records with no PO / an empty PO, plus a delete CSV for the empty POs |
 | 7 | `folio_export_pols.py` | PO/POL numbers for the EBSCONET renewal integration (POL = PO + `-1`) |
 | - | `folio_delete_orders.py` | Remove problem Pending POs / lines from a CSV, with backups |
+| - | `folio_clean_product_ids.py` | Removes the empty product-ID rows Data Import creates when an ISSN or title number is missing (runs after each load) |
 | - | `folio_cleanup_test_pos.py` | Deletes the test POs listed in your local .mrc files (Pending, EBSCONET vendor only) from a **test** tenant |
 | - | `folio_test_data.py` | Creates test ledger / funds / budgets / classes / org / location on a **test** tenant |
 
@@ -64,9 +65,7 @@ retry helper, preflight on real files. Mock-tested only: the non-S3 upload path.
    confirm Data Import permissions.
 3. **Decide the data rules** listed in the README (no-ISSN rows, no-title-number rows,
    duplicate order numbers).
-4. **Blank product ID**: Data Import leaves a blank entry on lines without a title number;
-   it is removed only when `folio_ongoing.py` converts the PO.
-5. **Test-tenant cleanup**: `folio_cleanup_test_pos.py` removes the ~115 test POs; the
+4. **Test-tenant cleanup**: `folio_cleanup_test_pos.py` removes the ~115 test POs; the
    9 profiles, 3 accounts and the `test_ebsconet_*` finance / org / location records on
    bugfest still have no cleanup script.
-6. Untested path: the non-S3 upload (only matters if the real tenant has file splitting off).
+5. Untested path: the non-S3 upload (only matters if the real tenant has file splitting off).

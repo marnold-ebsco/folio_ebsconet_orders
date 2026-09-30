@@ -60,7 +60,9 @@ Do a small trial first (a few records copied into a test .mrc), then the full fi
 - [ ] Load: same command plus `--live`. Long loads can exceed a terminal's time limit;
       run in the background or a second terminal and read the audit log afterwards.
 - [ ] Repeat for `- Print` and `- P-E` files if they exist.
-- [ ] Check the summary: "POs with a PO line: N of N", and the audit log written to
+- [ ] Check the summary: "POs with a PO line: N of N" and "empty product IDs removed
+      from N line(s)" (lines missing an ISSN or title number get an empty row from Data
+      Import; the loader removes it because FOLIO will not save a line that has one), and the audit log written to
       `out/import_logs/<time>_<file>.csv` (one row per job, record and PO).
 - [ ] In the FOLIO UI: search a few PO numbers in Orders; confirm status **Pending**, vendor,
       fund and expense class, price, dates, access provider / location, account number.

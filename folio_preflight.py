@@ -94,7 +94,7 @@ def check_records(recs, route):
         elif not ISSN_OK.match(rec["issn"]):
             issues.append((WARN, where, "ISSN %r does not look like NNNN-NNNN" % rec["issn"]))
         if not rec["title_number"]:
-            issues.append((WARN, where, "no title number (990$i)"))
+            issues.append((WARN, where, "no title number (990$i); the line will have no title-number product ID"))
     for key, human in (("order", "PO number"), ("id", "001 control number")):
         for value, count in Counter(r[key] for r in recs if r[key]).items():
             if count > 1:

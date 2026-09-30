@@ -14,6 +14,7 @@ import httpx
 from pymarc import MARCReader
 
 from ebsconet_prep import load_config
+from folio_clean_product_ids import clean_lines
 from folio_common import connect
 from folio_preflight import route_from_profile, run_preflight
 
@@ -120,6 +121,8 @@ def main(argv=None):
                    help="needed only if the job profile name is not the standard one")
     p.add_argument("--log-dir", default="out/import_logs",
                    help="folder for the per-import audit CSV")
+    p.add_argument("--no-cleanup", action="store_true",
+                   help="leave the empty product-ID rows Data Import creates")
     p.add_argument("--skip-preflight", action="store_true",
                    help="load even if the preflight check finds errors")
     args = p.parse_args(argv)
@@ -145,10 +148,17 @@ def main(argv=None):
     entries = {job["id"]: job_log(client, job["id"]) for job in jobs}
     results = po_results(client, numbers)
     rows = log_rows(jobs, entries, results)
+    cleaned = []
+    if not args.no_cleanup:
+        cleaned = clean_lines(client, [r["po"] for r in results if r["ok"]], True)
+        rows += [("cleanup", num, status, detail) for num, status, detail in cleaned]
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     log_path = Path(args.log_dir) / ("%s_%s.csv" % (stamp, Path(args.mrc).stem))
     write_audit(log_path, rows)
     print(summary(jobs, entries, results))
+    if not args.no_cleanup:
+        print("empty product IDs removed from %d line(s)"
+              % sum(1 for c in cleaned if c[1] == "cleaned"))
     print("audit log:", log_path)
     return 0 if all(r["ok"] for r in results) else 1
 

@@ -24,6 +24,7 @@ Not in the repo (git-ignored): filled-in `*.ini` files, the SOP spreadsheets, `o
 | 4 FOLIO profiles | `folio_setup.py` | done (dry run verified; not yet run live) |
 | - Test data on tenant | `folio_test_data.py` | run once on the bugfest tenant |
 | 5 Load a .mrc | `folio_import.py` | tested live (bugfest) |
+| - Remove empty product IDs | `folio_clean_product_ids.py` | tested live (bugfest); runs after each load |
 | - Retry failed records | `folio_retry_failed.py` | tested live (bugfest) |
 | - Remove bad POs/lines | `folio_delete_orders.py` | tested live (PO and line delete) |
 
@@ -199,12 +200,18 @@ P-E test on bugfest: PO S6134100 and E5115378 created as P/E Mix, one physical +
 electronic quantity, test location and `journal` material type, fund `TEST-PRINT`,
 receipt Pending, SOP price on the physical side and 0 electronic.
 
-Empty product ID: a record with no 990$i (Publisher Product Code) still gets a blank
-second product-ID entry on its PO line (Data Import cannot make a mapping row
-conditional). To limit it, the ID *type* is carried in the MARC as 990$j (added by
-`ebsconet_prep.py`, only when a title number exists) and the profile maps the type from
-990$j, so the blank entry has no type either. `folio_ongoing.py` removes blank
-product-ID entries when it converts a PO, so it disappears at that step.
+Empty product IDs: the import profile always builds two product-ID rows (ISSN and title
+number). A record missing either still gets the row, empty; FOLIO shows the empty row and
+refuses to save an edit of the line while it is there. A profile cannot skip a row (the
+MARC data alone cannot change that), so `folio_import.py` removes the empty rows
+automatically right after each load (`folio_clean_product_ids.py`; `--no-cleanup` to leave
+them). A line ends up with only its real IDs: ISSN + title number, just one of them, or
+none (package rows). Nothing is invented to fill a row. The ID *type* is carried in the
+MARC as 990$j (only when a title number exists). `folio_ongoing.py` also drops empty
+entries as a safety net. Run the cleaner on its own for earlier loads:
+```
+.venv/bin/python folio_clean_product_ids.py --csv po_numbers.csv --ini my_tenant.ini --live
+```
 
 `folio_setup.py --update-mappings --live` overwrites existing mapping profiles with the
 current build (used after changing the mapping).
