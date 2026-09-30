@@ -43,7 +43,11 @@ except pymarc / openpyxl / httpx.
   whose mapping sets any other status. Budgets matter only for having an Active budget with the
   expense class attached (else lines are discarded), not for the amount.
 - **Data Import makes one PO per record**, so two SOP rows with the same order number
-  cannot become two lines on one PO (the second fails). Preflight reports it.
+  cannot become two lines on one PO. Tested live: the second record is discarded with
+  "PO Number already exists". Preflight reports it. If a future SOP needs multi-line
+  POs: load the first line by import and add the others through the Orders API (raise
+  the PO's line limit first; the profile sets it to 1), or give the repeated order
+  numbers distinct suffixes (which changes the POL numbers EBSCONET expects).
 - **Fund / expense class / organization are matched by code** (proven on bugfest).
 - **Extra line fields**: Descriptor + Frequency -> line Description; Cancellable
   (inverted) -> cancellation restriction. **Expense classes are optional**

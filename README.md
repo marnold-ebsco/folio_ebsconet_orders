@@ -117,8 +117,11 @@ section `"folio"` (acquisition method, material type, location, receipt status,
 create-inventory, payment method for new accounts).
 
 Known limitations / things to verify on the first real import:
-- Data Import creates one PO per MARC record, so a second SOP line with an already used
-  PO number (one such order in the sample) will probably fail as a duplicate.
+- Data Import creates one PO with one line per MARC record. **Tested on bugfest**: two
+  records with the same PO number in one import -> the first loads, the second is
+  discarded with "PO Number already exists" (it does not add a line to the existing PO).
+  Many POs per import work fine (107 in two loads). In the current sample no order
+  number is repeated among the loadable rows.
 - 264$a is used for the publisher (not 260$a).
 - Fund, expense class and access provider ARE accepted by code (proven on bugfest).
 
