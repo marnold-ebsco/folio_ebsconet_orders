@@ -32,6 +32,11 @@ tool; inline quoting and heredocs with backticks break.
   so every PO (dry run and `--live`) is checked for an Active budget per fund and for a listed
   expense class; failures are `invalid` and nothing is POSTed. Replaces the old adapter-side
   `check_dry_run_budgets` (removed 2026-10-01). Blank expense classes skip the class half.
+  Re-verified on bugfest 2026-10-01 after the switch (`out/three_type_test`,
+  `sunflower_bugfest.ini`, `--skip-accounts`, `use_expense_classes: true`): 140/140 `dry-run`
+  (TEST-ELEC/GEN x135, TEST-PRINT/GEN x5, all with Active budgets listing GEN). That data has no
+  failing case; calling `check_budgets` directly on ZSS2025 + `access` returns "fund ZSS2025 has
+  no Active budget for the current fiscal year" (the class itself is never reached).
   Not yet tried on a tenant with real budget limits.
 
 ## What the workflow does
