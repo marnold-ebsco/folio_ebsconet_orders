@@ -207,3 +207,13 @@ def test_accounts_from_workbooks(tmp_path, cfg):
             ws.append(["t", n])
         wb.save(tmp_path / name)
     assert fs.accounts_from_workbooks(tmp_path, cfg) == ["X1", "X2", "X3"]
+
+
+def test_accounts_from_workbooks_uses_configured_heading(tmp_path, cfg):
+    cfg = dict(cfg, columns=dict(cfg["columns"], account="Acct No"))
+    wb = Workbook()
+    ws = wb.active
+    ws.append(["Title Name", "Acct No"])
+    ws.append(["t", "Z9"])
+    wb.save(tmp_path / cfg["output_names"]["online"])
+    assert fs.accounts_from_workbooks(tmp_path, cfg) == ["Z9"]

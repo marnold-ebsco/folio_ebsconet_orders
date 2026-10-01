@@ -176,6 +176,7 @@ def account_entry(number, payment_method):
 def accounts_from_workbooks(in_dir, cfg):
     """Distinct Account Numbers in the prepared workbooks."""
     found = set()
+    heading = cfg["columns"]["account"]
     for name in cfg["output_names"].values():
         path = Path(in_dir) / name
         if not path.exists():
@@ -183,9 +184,9 @@ def accounts_from_workbooks(in_dir, cfg):
         ws = load_workbook(path, read_only=True, data_only=True).worksheets[0]
         rows = ws.iter_rows(values_only=True)
         header = list(next(rows))
-        if "Account Number" not in header:
+        if heading not in header:
             continue
-        i = header.index("Account Number")
+        i = header.index(heading)
         found.update(str(r[i]).strip() for r in rows if r[i] not in (None, ""))
     return sorted(found)
 

@@ -78,6 +78,25 @@ def read_sops(paths):
     return headers, rows
 
 
+REQUIRED_COLUMNS = ("title", "issn", "format", "order_number", "cost")
+
+
+def check_headers(headers, cfg):
+    """Fail loudly if the SOP lacks a heading the pipeline cannot work without.
+
+    `cfg["columns"]` maps each logical column to the SOP heading; a renamed heading would
+    otherwise read as blank on every row. Fix it in pipeline_config.json."""
+    missing = [(key, cfg["columns"][key]) for key in REQUIRED_COLUMNS
+               if cfg["columns"][key] not in headers]
+    if missing:
+        raise ValueError(
+            "SOP is missing required column heading(s): %s. Headings found: %s. If SOP "
+            "renamed a heading, override it under `columns` in your ebsconet_config.json "
+            "(keys are listed in pipeline/pipeline_config.json)." % (
+                ", ".join("%r (%s)" % (h, k) for k, h in missing),
+                ", ".join(repr(h) for h in headers if h)))
+
+
 def read_mapped_columns(headers_file):
     """SOP columns that the order_marc_headers file maps to a MARC tag."""
     if not headers_file or not Path(headers_file).exists():
@@ -340,6 +359,7 @@ def prepare(input_path, out_dir, cfg, headers_file=None):
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     headers, rows = read_sops(input_path)
+    check_headers(headers, cfg)
     added = list(cfg["added_columns"].values())
     columns = headers + [name for name in added if name not in headers]
     highlight = set(added)                     # only the columns we add, not the SOP's
@@ -505,6 +525,7 @@ def prepare_for_customer(input_path, out_dir, cfg):
     rules are applied later, when the filled-in spreadsheets come back."""
     c = cfg["columns"]
     headers, rows = read_sop(input_path)
+    check_headers(headers, cfg)
 
     kept = {r: [] for r in ROUTES}
     removed, unrouted = [], []

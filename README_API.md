@@ -265,6 +265,7 @@ own folder with the global option, for example `ebsconet.py --out out/2026-sprin
 | A fund line fails on the expense class | The fund needs an Active budget for the fiscal year that lists the expense class |
 | `organization X not found; accounts not added` | The FOLIO Org code is wrong or the organization does not exist; fix it, or the loader rejects the lines |
 | `load` exited 1 | At least one PO was invalid / lookup-failed / error / open-error. Every other PO was still processed. Fix the listed ones and run `load --live` again; existing POs are skipped |
+| `SOP is missing required column heading(s)` | SOP renamed a heading. Override it in `columns` in your `work/ebsconet_config.json`, e.g. `{"columns": {"cost": "New Heading"}}` (survives upgrades; keys are in `pipeline/pipeline_config.json`) |
 | PO numbers | FOLIO accepts 1-22 letters and digits only |
 | A resource URL FOLIO rejects | Lowercase scheme and host are required; prep fixes this. Other malformed URLs must be fixed in the spreadsheet |
 | Wrongly loaded orders to remove | See "Removing problem orders" |

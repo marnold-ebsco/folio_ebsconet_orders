@@ -360,6 +360,7 @@ own folder with the global option, for example `ebsconet.py --out out/2026-sprin
 | Problem | Tool |
 |---|---|
 | Some records did not load (discarded, or an empty PO left behind) | `.venv/bin/python folio_retry_failed.py out/marc/<file>.mrc --ini my_tenant.ini` lists them and writes `out/retry/<file>_retry.mrc` plus `_delete_empty.csv` |
+| `SOP is missing required column heading(s)` | SOP renamed a heading. Override it in `columns` in your `work/ebsconet_config.json`, e.g. `{"columns": {"cost": "New Heading"}}` (survives upgrades; keys are in `pipeline/pipeline_config.json`) |
 | Empty POs or wrongly loaded orders to remove | `folio_delete_orders.py` (below) |
 | Load the retry file | `.venv/bin/python -m pipeline.folio_import out/retry/<file>_retry.mrc --ini my_tenant.ini --job-profile "EBSCONET order migration - Online"` (add `--live`) |
 | Several lines for one PO number (Data Import discards the later records) | `folio_add_po_lines.py` (below) |

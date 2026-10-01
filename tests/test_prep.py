@@ -1,3 +1,4 @@
+import re
 import json
 import sys
 from pathlib import Path
@@ -316,3 +317,21 @@ def test_load_config_merges_both_files_and_the_library_wins(tmp_path):
     assert cfg["rules"] == {"x": 1}                           # from the library file
     assert cfg["output_names"]["online"] == "mine.xlsx"       # library overrides...
     assert cfg["output_names"]["print"] == "library-EBSCONET-print.xlsx"   # ...per key
+
+
+def test_check_headers_names_missing_columns(cfg):
+    prep.check_headers(HEADERS, cfg)
+    with pytest.raises(ValueError, match=re.escape("'Total Cost' (cost)")):
+        prep.check_headers([h for h in HEADERS if h != "Total Cost"], cfg)
+
+
+def test_prepare_rejects_sop_with_renamed_heading(cfg, tmp_path):
+    src = tmp_path / "sop.xlsx"
+    wb = Workbook()
+    ws = wb.active
+    ws.append(["Title", "ISSN", "Format", "Order Number", "Total Cost"])
+    wb.save(src)
+    with pytest.raises(ValueError, match="'Title Name'"):
+        prep.prepare(src, tmp_path / "out", cfg)
+    with pytest.raises(ValueError, match="'Title Name'"):
+        prep.prepare_for_customer(src, tmp_path / "out2", cfg)
