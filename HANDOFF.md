@@ -12,7 +12,7 @@ GitHub `marnold-ebsco/folio_ebsconet_orders`, SSH remote only. Run everything wi
 tool; inline quoting and heredocs with backticks break.
 
 - Merged to `main` 2026-10-01 (fast-forward, `8d58b75`; the `api-load-default` branch is deleted).
-  Loader pinned to v0.3.2. The **Orders API is the default load**; the MARC / Data Import
+  Loader pinned to v0.3.4. The **Orders API is the default load**; the MARC / Data Import
   route is the backup (`--use-marc`). 200 tests pass, flake8 clean.
 - **SOP heading validation (`fe2c5cc`, on `main`, pushed):** `ebsconet_prep.check_headers()` runs at
   the start of `prepare()` and `prepare_for_customer()` and raises `ValueError` if a required SOP
