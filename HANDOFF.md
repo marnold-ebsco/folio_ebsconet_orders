@@ -11,9 +11,9 @@ GitHub `marnold-ebsco/folio_ebsconet_orders`, SSH remote only. Run everything wi
 `wsl.exe -e bash -lc '...'`. Write patch scripts / commit messages to a file with the Write
 tool; inline quoting and heredocs with backticks break.
 
-## Current state
-- Branch `api-load-default`, pushed, NOT merged to `main`, no PR yet. `main` is at `84a99ac`
-  (loader pinned to v0.3.0). The branch makes the **Orders API the default load**; the
+- Merged to `main` 2026-10-01 (fast-forward, `8d58b75`; the `api-load-default` branch is deleted).
+  Loader pinned to v0.3.1. The **Orders API is the default load**; the MARC / Data Import
+  route is the backup (`--use-marc`). 199 tests pass, flake8 clean.
   MARC / Data Import route is the backup (`--use-marc`). 197 tests pass, flake8 clean.
 - `ebsconet.py load` / `finish` use `pipeline/folio_orders_adapter.py` `load_orders()`.
   `--use-marc` on both selects the MARC route. `--skip-accounts` skips the vendor-account
@@ -72,9 +72,7 @@ tool; inline quoting and heredocs with backticks break.
   other vendors: never touch those.
 
 ## Open
-1. **Merge `api-load-default`**: open a PR or merge to `main` (user wants the real-tenant
-   test, item below, handled by the user later; it does not block the merge unless that
-   changes).
+1. **Done:** `api-load-default` merged to `main` 2026-10-01.
 2. **Real-tenant test (user will run it).** Bugfest allows overspend and is lenient, so
    budget enforcement, acquisition-unit restrictions and `open-error` have only unit tests.
    Suggested order: adapter dry run, then a small batch (5-7 POs, one per format) from `/tmp`,
