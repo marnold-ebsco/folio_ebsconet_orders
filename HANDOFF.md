@@ -1,4 +1,4 @@
-# Handoff: EBSCOnet orders pipeline (updated 2026-10-01)
+# Handoff: EBSCOnet orders pipeline (updated 2026-10-01, installer added)
 
 Read this for the EBSCOnet / `folio_ebsconet_orders` work (three customer spreadsheets, the
 `ebsconet.py` workflow, the adapter). For the API loader package itself
@@ -27,6 +27,17 @@ tool; inline quoting and heredocs with backticks break.
   summary log was offered, not built.
 - Docs: `README.md` is an index; `README_API.md` and `README_DATA_IMPORT.md` are standalone
   guides (Setup near the top); `RUNBOOK.md`, `PLAN.md`, `docs/CLIENT_GUIDE.md`.
+- **Installer (`7f5956c`, pushed; not yet tried on a real EC2):** `packaging/make_bundle.sh`
+  builds `dist/ebsconet-<version>.tar.gz` from `HEAD` (commit first): app code (no tests,
+  `.ini`, `HANDOFF.md`), a wheelhouse of all dependencies including `folio_orders_loader`
+  (built here via the SSH key; the bundle's `requirements.txt` pins it by version, not git),
+  and `packaging/install.sh`. On the server (Python 3.12+, no git or SSH key):
+  `tar xzf ... && ebsconet-<version>/install.sh [--prefix DIR]` -> `~/ebsconet/{app,venv,work}`,
+  `ebsconet` linked into `~/.local/bin`. Re-running upgrades code and deps and leaves `work/`
+  (config, `.ini`, `out/`) alone; run `ebsconet` from `work/` (relative config paths). Wheels
+  match the build machine (Linux x86_64, Python 3.12); pip falls back to PyPI otherwise.
+  Verified only by installing into a temp prefix here (`ebsconet --help` ran). `dist/` is
+  gitignored. Bump the loader pin in `requirements.txt` as before; the bundle follows it.
 - **Budget checks:** the adapter calls the loader's `load(..., check_budget=True)` (loader v0.3.2),
   so every PO (dry run and `--live`) is checked for an Active budget per fund and for a listed
   expense class; failures are `invalid` and nothing is POSTed. Replaces the old adapter-side
