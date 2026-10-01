@@ -50,8 +50,9 @@ tool; inline quoting and heredocs with backticks break.
   (`0648176`) if the interpreter is below 3.12 or cannot `import venv, ensurepip` (Debian/Ubuntu:
   `sudo apt install python3-venv`). Tested into a temp dir with a `gh auth token` as
   `GITHUB_TOKEN`: fresh install, `--check`, in-place re-run (`work/` kept), the loader imports,
-  and the venv-check error via a stub interpreter. Not tested: the update-available path, the
-  `curl | bash -s --` form, or a real EC2.
+  the venv-check error via a stub interpreter, and the update path (installed `--ref 76eb911`,
+  then `--check` reported the update without changing anything, then a plain run upgraded to
+  `main` and kept `work/`). Not tested: the `curl | bash -s --` form, or a real EC2.
 - **Budget checks:** the adapter calls the loader's `load(..., check_budget=True)` (loader v0.3.2),
   so every PO (dry run and `--live`) is checked for an Active budget per fund and for a listed
   expense class; failures are `invalid` and nothing is POSTed. Replaces the old adapter-side
