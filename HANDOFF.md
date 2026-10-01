@@ -22,8 +22,7 @@ tool; inline quoting and heredocs with backticks break.
   hardcoded `"Account Number"`. To follow a renamed SOP heading, put a `columns` override in
   the library's `work/ebsconet_config.json` (deep-merged over `pipeline/pipeline_config.json`;
   survives `install.sh` upgrades, which replace `app/` but never overwrite `work/`). A separate
-  map file was considered and rejected as not worth it for one fixed SOP layout. Bundle rebuilt
-  from this commit (`dist/ebsconet-v0.3.0-23-gfe2c5cc.tar.gz`), not yet installed or tested on EC2.
+  map file was considered and rejected as not worth it for one fixed SOP layout.
 - `ebsconet.py load` / `finish` use `pipeline/folio_orders_adapter.py` `load_orders()`.
   `--use-marc` on both selects the MARC route. `--skip-accounts` skips the vendor-account
   step. `load` processes every PO, then exits 1 if any is invalid / lookup-failed / error /
@@ -37,21 +36,18 @@ tool; inline quoting and heredocs with backticks break.
   summary log was offered, not built.
 - Docs: `README.md` is an index; `README_API.md` and `README_DATA_IMPORT.md` are standalone
   guides (Setup near the top); `RUNBOOK.md`, `PLAN.md`, `docs/CLIENT_GUIDE.md`.
-- **Installer (`7f5956c`, pushed; not yet tried on a real EC2):** `packaging/make_bundle.sh`
-  builds `dist/ebsconet-<version>.tar.gz` from `HEAD` (commit first): app code (no tests,
-  `.ini`, `HANDOFF.md`), a wheelhouse of all dependencies including `folio_orders_loader`
-  (built here via the SSH key; the bundle's `requirements.txt` pins it by version, not git),
-  and `packaging/install.sh`. On the server (Python 3.12+, no git or SSH key):
-  `tar xzf ... && ebsconet-<version>/install.sh [--prefix DIR]` -> `~/ebsconet/{app,venv,work}`,
-  `ebsconet` linked into `~/.local/bin`. Re-running upgrades code and deps and leaves `work/`
-  (config, `.ini`, `out/`) alone; run `ebsconet` from `work/` (relative config paths). Wheels
-  match the build machine (Linux x86_64, Python 3.12); pip falls back to PyPI otherwise.
-  Verified only by installing into a temp prefix here (`ebsconet --help` ran). `dist/` is
-  gitignored. To ship a new loader: bump the loader version and tag, bump the pin in
-`requirements.txt`, commit, rebuild, re-run `install.sh` on the server. `install.sh` always
-force-reinstalls the loader wheel (`5c2d249`), so the new code lands even if the version is
-unchanged; the venv's other dependencies upgrade only when their pinned version changes.
-Tested twice into a temp prefix, not against a same-version/changed-code loader.
+- **Installer (root `install.sh`, rewritten 2026-10-01 in the style of marc-repair's; the old
+  bundle build `packaging/` was deleted; not yet committed/pushed or tried on a real EC2):**
+  fetches the app tarball pinned to a commit SHA from the GitHub API (no tests, `packaging`,
+  dev docs) plus the `folio_orders_loader` tag read from the `requirements.txt` pin, over HTTPS
+  (no git or SSH key). Repos are private: the server needs `GITHUB_TOKEN` (read access to both
+  repos), or make them public. Options `--dir` (alias `--prefix`), `--python`, `--ref`,
+  `--recreate-venv`, `--check`; SHA kept in `.ebsconet_install_version`. Layout
+  `~/ebsconet/{app,venv,work}`, `ebsconet` linked into `~/.local/bin`; re-running upgrades code
+  and deps and leaves `work/` alone. Loader is always force-reinstalled (pip builds its
+  tarball, so the server needs PyPI). To ship a new loader: bump the loader tag, bump the pin
+  in `requirements.txt`, push, re-run `install.sh`. Verified only by `bash -n`, `--help` and
+  the pin-parsing sed; no live run yet.
 - **Budget checks:** the adapter calls the loader's `load(..., check_budget=True)` (loader v0.3.2),
   so every PO (dry run and `--live`) is checked for an Active budget per fund and for a listed
   expense class; failures are `invalid` and nothing is POSTed. Replaces the old adapter-side
