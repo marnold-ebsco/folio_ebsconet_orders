@@ -16,3 +16,6 @@ test_data_created.json
 *.xlsx
 !order_marc_headers.xlsx
 EBSCOnetInstructions.txt
+
+# built install bundles
+dist/
