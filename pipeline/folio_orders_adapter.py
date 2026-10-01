@@ -126,10 +126,32 @@ def ensure_accounts(client, lines, payment_method, live):
     return report
 
 
-def main(argv=None):
+BAD_STATUS = ("invalid", "lookup-failed", "error", "open-error")
+
+
+def load_orders(in_dir, ini, cfg, live, skip_accounts=False):
+    """Add vendor accounts, then create the POs through the Orders API.
+
+    Returns the loader's [(po_number, status, detail)] list.
+    """
     from folio_orders_loader.client import connect
     from folio_orders_loader.loader import load
 
+    lines = workbook_lines(in_dir, cfg)
+    print("%d lines from %s" % (len(lines), in_dir))
+    client = connect(ini)
+    if not skip_accounts:
+        payment = cfg["folio"]["account_payment_method"]
+        for code, added, have in ensure_accounts(client, lines, payment, live):
+            if added is None:
+                print("organization %s not found; accounts not added" % code)
+            else:
+                print("accounts on %s: %d %s, %d already present" % (
+                    code, len(added), "added" if live else "to add", len(have)))
+    return load(client, lines, live=live)
+
+
+def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--in-dir", default="out", help="folder holding the prep workbooks")
     p.add_argument("--config", default="ebsconet_config.json")
@@ -139,21 +161,10 @@ def main(argv=None):
                    help="do not add the SOP account numbers to the vendor organizations")
     args = p.parse_args(argv)
     cfg = load_config(args.config)
-    lines = workbook_lines(args.in_dir, cfg)
-    print("%d lines from %s" % (len(lines), args.in_dir))
-    client = connect(args.ini)
-    if not args.skip_accounts:
-        payment = cfg["folio"]["account_payment_method"]
-        for code, added, have in ensure_accounts(client, lines, payment, args.live):
-            if added is None:
-                print("organization %s not found; accounts not added" % code)
-            else:
-                print("accounts on %s: %d %s, %d already present" % (
-                    code, len(added), "added" if args.live else "to add", len(have)))
-    results = load(client, lines, live=args.live)
+    results = load_orders(args.in_dir, args.ini, cfg, args.live, args.skip_accounts)
     for r in results:
         print(r)
-    return 0
+    return 1 if any(r[1] in BAD_STATUS for r in results) else 0
 
 
 if __name__ == "__main__":

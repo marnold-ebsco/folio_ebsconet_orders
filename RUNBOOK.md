@@ -40,8 +40,8 @@ One-time per tenant (before the first load): section A below, then
 | `ebsconet.py for-customer SOP.xlsx` | step 2 | Removes every zero-dollar line; splits the rest into an **electronic**, a **physical** and a **P-E** spreadsheet, each with its own highlighted customer columns; logs what was removed or not sent | no |
 | `ebsconet.py build FILLED*.xlsx` | step 5 | Takes the customer's filled-in files (all three, or one), applies the remaining rules, uses the customer's values, builds the MARC files and `order_settings.csv` | no |
 | `ebsconet.py setup --ini TENANT.ini` | once per tenant | Adds the SOP's account numbers to the vendor organization; creates the Online / Print / P-E Data Import profiles | only with `--live` |
-| `ebsconet.py load --ini TENANT.ini` | steps 6-7 | For each MARC file: preflight checks, then upload, import, verify, clean up empty product IDs, audit log | only with `--live` |
-| `ebsconet.py finish --ini TENANT.ini` | step 8 | Converts the loaded POs to ongoing orders; writes the PO / POL export for EBSCONET | ongoing conversion only with `--live` |
+| `ebsconet.py load --ini TENANT.ini` | steps 6-7 | Creates the POs through the Orders API (default; adds SOP account numbers to the vendors). With `--use-marc`, for each MARC file: preflight checks, then upload, import, verify, clean up empty product IDs, audit log | only with `--live` |
+| `ebsconet.py finish --ini TENANT.ini` | step 8 | Writes the PO / POL export for EBSCONET; with `--use-marc` it first converts the loaded POs to ongoing orders | ongoing conversion only with `--live` |
 
 The steps behind these (in `pipeline/`) are not run by hand. The tools in section D are
 the ones you run separately, when something needs fixing.
@@ -133,6 +133,7 @@ Nothing for us to do. A blank cell falls back to the defaults in the config.
 - [ ] Open a `.mrk` file in `out/marc/` and eyeball a few records.
 
 ### 6. Dry-run the load (preflight)
+Steps 6-8 describe the backup MARC route (add `--use-marc` to `load` and `finish`). The default Orders API `load` works the same way (dry run, then `--live`) but has no preflight, no job profile and no ongoing conversion; `finish` only writes the POL export. See README "Default load".
 - [ ] `.venv/bin/python ebsconet.py load --ini TENANT.ini`
 - [ ] The preflight check reads the files and the tenant and reports **ERROR**s (the load
       would fail or discard lines) and warnings. Typical errors are a fund, expense class
@@ -206,7 +207,7 @@ as is was made on 2026-09-30; revisit it if the renewal dates should work differ
 | Load the retry file | `.venv/bin/python -m pipeline.folio_import out/retry/<file>_retry.mrc --ini TENANT.ini --job-profile "EBSCONET order migration - Online"` (add `--live`) |
 | Empty product IDs on orders loaded another way | `.venv/bin/python -m pipeline.folio_clean_product_ids --csv po_numbers.csv --ini TENANT.ini --live` |
 | Test tenant: remove the test POs you loaded | `folio_cleanup_test_pos.py --ini TENANT.ini` (dry run) then `--live`. Test tenants only |
-| Several lines on one PO, or no Data Import profiles wanted | Load through the Orders API instead of MARC: `.venv/bin/python -m pipeline.folio_orders_adapter --ini TENANT.ini` (dry run), then `--live`. Reads the `build` workbooks in `out/`, adds the SOP account numbers to each line's vendor organization (`--skip-accounts` to skip). Use it instead of `load` / `finish`; see README "Alternative load" |
+| The Orders API load fails or is unavailable | Use the backup MARC / Data Import route: `ebsconet.py load --use-marc --ini TENANT.ini` (dry run = preflight), `--live`, then `ebsconet.py finish --use-marc --ini TENANT.ini --live`. Needs `setup` profiles. Several lines on one PO are not possible on this route |
 | One step on its own (any `pipeline/` step) | `.venv/bin/python -m pipeline.<step> --help` |
 
 After fixing the cause, regenerate the `.mrc` if the data changed (`build` again), then

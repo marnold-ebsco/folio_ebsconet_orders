@@ -7,9 +7,11 @@
                           three) and build the MARC files (out/library-EBSCONET_*.xlsx
                           and out/marc/*.mrc)
   setup                   once per tenant: vendor accounts and Data Import profiles
-  load                    preflight + load every MARC file with the right job profile
-  finish                  convert the loaded POs to ongoing orders and export the
-                          PO / POL numbers for EBSCONET (out/pol_export.csv)
+                          (the profiles are only needed for --use-marc)
+  load                    create the POs through the Orders API (default); with
+                          --use-marc: preflight + load the MARC files by Data Import
+  finish                  export the PO / POL numbers for EBSCONET (out/pol_export.csv);
+                          with --use-marc, first convert the loaded POs to ongoing
 
 Nothing is written to FOLIO without --live (setup, load, finish). RUNBOOK.md has the
 full workflow; the lower-level tools (retry, delete, add lines, ...) stay separate.
@@ -71,6 +73,22 @@ def cmd_setup(args, cfg):
 
 
 def cmd_load(args, cfg):
+    if args.use_marc:
+        return load_marc(args, cfg)
+    from pipeline import folio_orders_adapter as adapter
+    results = adapter.load_orders(args.out, args.ini, cfg, args.live, args.skip_accounts)
+    counts = {}
+    for po, status, detail in results:
+        counts[status] = counts.get(status, 0) + 1
+        if status in adapter.BAD_STATUS:
+            print("  %s %s: %s" % (status.upper(), po, detail))
+    print("load results (%s): %s" % (
+        "LIVE" if args.live else "dry run",
+        ", ".join("%s %d" % kv for kv in sorted(counts.items())) or "nothing to load"))
+    return 1 if any(s in adapter.BAD_STATUS for s in counts) else 0
+
+
+def load_marc(args, cfg):
     from pipeline import folio_import
     files = [(r, p) for r, p in marc_files(args.out, cfg)
              if not args.only or r == args.only]
@@ -105,27 +123,37 @@ def cmd_finish(args, cfg):
     from pipeline import folio_ongoing
     from pipeline.folio_common import connect
     from pipeline.folio_import import po_numbers
-    numbers = []
-    for _, path in marc_files(args.out, cfg):
-        numbers += po_numbers(path)
+    if args.use_marc:
+        numbers = []
+        for _, path in marc_files(args.out, cfg):
+            numbers += po_numbers(path)
+        empty = "no MARC files in %s; nothing to finish" % args.out
+    else:
+        from pipeline.folio_orders_adapter import workbook_lines
+        numbers = [line["po_number"] for line in workbook_lines(args.out, cfg)]
+        empty = "no prepared workbooks in %s; nothing to finish" % args.out
     numbers = list(dict.fromkeys(numbers))
     if not numbers:
-        print("no MARC files in %s; nothing to finish" % args.out)
+        print(empty)
         return 1
     client = connect(args.ini)
-    print("%d PO numbers; ongoing conversion: %s" % (
-        len(numbers), "LIVE" if args.live else "dry run"))
-    settings_file = Path(args.out) / "order_settings.csv"
-    choices = (folio_ongoing.read_order_settings(settings_file)
-               if settings_file.exists() else {})
-    results = folio_ongoing.convert_all(client, numbers, cfg["ongoing"], args.live,
-                                        choices)
-    log = Path(args.out) / "ongoing_log.csv"
-    folio_ongoing.write_log(log, results)
     counts = {}
-    for _, status, _ in results:
-        counts[status] = counts.get(status, 0) + 1
-    print(", ".join("%s: %d" % kv for kv in sorted(counts.items())), "| log:", log)
+    if args.use_marc:
+        print("%d PO numbers; ongoing conversion: %s" % (
+            len(numbers), "LIVE" if args.live else "dry run"))
+        settings_file = Path(args.out) / "order_settings.csv"
+        choices = (folio_ongoing.read_order_settings(settings_file)
+                   if settings_file.exists() else {})
+        results = folio_ongoing.convert_all(client, numbers, cfg["ongoing"], args.live,
+                                            choices)
+        log = Path(args.out) / "ongoing_log.csv"
+        folio_ongoing.write_log(log, results)
+        for _, status, _ in results:
+            counts[status] = counts.get(status, 0) + 1
+        print(", ".join("%s: %d" % kv for kv in sorted(counts.items())), "| log:", log)
+    else:
+        print("%d PO numbers; the API load already set order type and renewal "
+              "details, so there is no ongoing conversion" % len(numbers))
     rows = folio_export_pols.export_rows(
         folio_export_pols.fetch_lines(client, po_numbers=numbers))
     export = Path(args.out) / "pol_export.csv"
@@ -160,10 +188,18 @@ def build_parser():
         if name == "setup":
             s.add_argument("--update-mappings", action="store_true",
                            help="overwrite existing mapping profiles")
+        if name in ("load", "finish"):
+            s.add_argument("--use-marc", action="store_true",
+                           help="use the MARC / Data Import route instead of the Orders "
+                           "API (the backup route)")
         if name == "load":
-            s.add_argument("--only", choices=ROUTES, help="load just one file")
-            s.add_argument("--skip-preflight", action="store_true")
-            s.add_argument("--no-cleanup", action="store_true")
+            s.add_argument("--skip-accounts", action="store_true",
+                           help="API route: do not add SOP account numbers to the vendors")
+            s.add_argument("--only", choices=ROUTES,
+                           help="--use-marc only: load just one file")
+            s.add_argument("--skip-preflight", action="store_true",
+                           help="--use-marc only")
+            s.add_argument("--no-cleanup", action="store_true", help="--use-marc only")
         s.set_defaults(func=func)
     return p
 

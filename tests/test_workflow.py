@@ -145,7 +145,7 @@ def test_load_runs_each_file_with_its_own_job_profile(tmp_path, monkeypatch, cap
     rec = Recorder()
     monkeypatch.setattr(folio_import, "main", rec)
     out = marc_dir(tmp_path, ["online", "pe"])
-    rc = cli.main(["--out", str(out), "load", "--ini", "t.ini", "--live"])
+    rc = cli.main(["--out", str(out), "load", "--use-marc", "--ini", "t.ini", "--live"])
     assert rc == 0 and len(rec.calls) == 2
     first, second = rec.calls
     assert first[0].endswith("library-EBSCONET_online.mrc")
@@ -159,7 +159,7 @@ def test_load_only_and_flags(tmp_path, monkeypatch):
     rec = Recorder()
     monkeypatch.setattr(folio_import, "main", rec)
     out = marc_dir(tmp_path, ["online", "print"])
-    cli.main(["--out", str(out), "load", "--ini", "t.ini", "--only", "print",
+    cli.main(["--out", str(out), "load", "--use-marc", "--ini", "t.ini", "--only", "print",
               "--no-cleanup", "--skip-preflight"])
     assert len(rec.calls) == 1 and rec.calls[0][0].endswith("library-EBSCONET-print.mrc")
     assert "--live" not in rec.calls[0]
@@ -178,15 +178,62 @@ def test_load_reports_a_stopped_file_and_carries_on(tmp_path, monkeypatch, capsy
 
     monkeypatch.setattr(folio_import, "main", fake)
     out = marc_dir(tmp_path, ["online", "pe"])
-    rc = cli.main(["--out", str(out), "load", "--ini", "t.ini"])
+    rc = cli.main(["--out", str(out), "load", "--use-marc", "--ini", "t.ini"])
     text = capsys.readouterr().out
     assert rc == 1
     assert "preflight found errors" in text and "online PROBLEM, pe ok" in text
 
 
 def test_load_without_marc_files_says_so(tmp_path, capsys):
-    assert cli.main(["--out", str(tmp_path), "load", "--ini", "t.ini"]) == 1
+    assert cli.main(["--out", str(tmp_path), "load", "--use-marc",
+                     "--ini", "t.ini"]) == 1
     assert "run `build` first" in capsys.readouterr().out
+
+
+def test_load_defaults_to_the_orders_api(tmp_path, monkeypatch, capsys):
+    from pipeline import folio_import, folio_orders_adapter as adapter
+    calls = []
+
+    def fake(in_dir, ini, cfg, live, skip_accounts=False):
+        calls.append((in_dir, ini, live, skip_accounts))
+        return [("A1", "created", "A1-1"), ("A2", "error", "boom")]
+
+    monkeypatch.setattr(adapter, "load_orders", fake)
+    monkeypatch.setattr(folio_import, "main", lambda argv: pytest.fail("MARC used"))
+    rc = cli.main(["--out", str(tmp_path), "load", "--ini", "t.ini", "--live",
+                   "--skip-accounts"])
+    text = capsys.readouterr().out
+    assert calls == [(str(tmp_path), "t.ini", True, True)]
+    assert rc == 1 and "ERROR A2: boom" in text and "created 1" in text
+
+
+def test_api_load_succeeds_when_nothing_is_bad(tmp_path, monkeypatch):
+    from pipeline import folio_orders_adapter as adapter
+    monkeypatch.setattr(adapter, "load_orders",
+                        lambda *a, **k: [("A1", "dry-run", "1 line(s)"), ("A2", "exists", "")])
+    assert cli.main(["--out", str(tmp_path), "load", "--ini", "t.ini"]) == 0
+
+
+def test_finish_api_route_exports_without_ongoing_conversion(tmp_path, monkeypatch):
+    from pipeline import folio_export_pols, folio_ongoing, folio_common
+    from pipeline import folio_orders_adapter as adapter
+    monkeypatch.setattr(adapter, "workbook_lines",
+                        lambda d, c: [{"po_number": "A1"}, {"po_number": "A1"},
+                                      {"po_number": "A2"}])
+    monkeypatch.setattr(folio_common, "connect", lambda ini: object())
+    monkeypatch.setattr(folio_ongoing, "convert_all",
+                        lambda *a, **k: pytest.fail("ongoing conversion ran"))
+    seen = {}
+
+    def fetch(client, po_numbers):
+        seen["numbers"] = po_numbers
+        return []
+
+    monkeypatch.setattr(folio_export_pols, "fetch_lines", fetch)
+    monkeypatch.setattr(folio_export_pols, "export_rows", lambda lines: [])
+    monkeypatch.setattr(folio_export_pols, "write_csv", lambda path, rows: None)
+    assert cli.main(["--out", str(tmp_path), "finish", "--ini", "t.ini"]) == 0
+    assert seen["numbers"] == ["A1", "A2"]
 
 
 def test_setup_passes_its_options_through(monkeypatch):

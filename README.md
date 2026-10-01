@@ -48,7 +48,7 @@ The per-step sections below describe each step's behavior and options. Their com
 | - Remove empty product IDs | `pipeline/folio_clean_product_ids.py` | tested live; runs after each load |
 | - Retry failed records | `folio_retry_failed.py` | tested live |
 | - Remove bad POs/lines | `folio_delete_orders.py` | tested live (PO and line delete) |
-| - Alternative load via Orders API | `pipeline/folio_orders_adapter.py` | tested live (adds vendor accounts too) |
+| - Default load via Orders API (MARC with `--use-marc`) | `pipeline/folio_orders_adapter.py` | tested live (adds vendor accounts too) |
 
 Start-to-finish checklist: see `RUNBOOK.md`.
 
@@ -283,21 +283,27 @@ entries as a safety net. Run the cleaner on its own for earlier loads:
 `folio_setup.py --update-mappings --live` overwrites existing mapping profiles with the
 current build (used after changing the mapping).
 
-## Alternative load: the Orders API (`pipeline/folio_orders_adapter.py`)
+## Default load: the Orders API (`pipeline/folio_orders_adapter.py`)
 ```
-.venv/bin/python -m pipeline.folio_orders_adapter --ini <tenant.ini>            # dry run
-.venv/bin/python -m pipeline.folio_orders_adapter --ini <tenant.ini> --live     # POSTs
+.venv/bin/python ebsconet.py load --ini <tenant.ini>            # dry run
+.venv/bin/python ebsconet.py load --ini <tenant.ini> --live     # POSTs
+.venv/bin/python ebsconet.py finish --ini <tenant.ini>          # POL export only
 ```
-An alternative to MARC / Data Import. It reads the same prep workbooks `build` writes
-(`out/library-EBSCONET_online.xlsx`, `library-EBSCONET-print.xlsx`, `..._P-E.xlsx`; `--in-dir` to read
-another folder), maps each row to a neutral line record and hands the records to the
-separate `folio_orders_loader` package (pinned by git tag in `requirements.txt`), which
-validates them and creates the orders through the Orders API. It needs no `setup` profiles
-and no job profile, and **several rows with the same Order Number become extra lines of one
-PO**, which Data Import cannot do (see "Known limitations" in step 4). A dry run validates
-and prints what it would create; nothing is written without `--live`. Orders are created
-Pending. The `ebsconet.py` commands `setup`, `load` and `finish` belong to the Data Import
-route; the ongoing-order settings are applied directly to each line instead.
+`load` creates the orders through the Orders API; the MARC / Data Import route is the backup
+and is selected with `--use-marc` on both `load` and `finish`. The adapter reads the same prep
+workbooks `build` writes (`out/library-EBSCONET_online.xlsx`, `library-EBSCONET-print.xlsx`,
+`..._P-E.xlsx`; `--out` selects the folder), maps each row to a neutral line record and hands
+the records to the separate `folio_orders_loader` package (pinned by git tag in
+`requirements.txt`), which validates them and creates the orders. It needs no `setup`
+profiles and no job profile, and **several rows with the same Order Number become extra lines
+of one PO**, which Data Import cannot do (see "Known limitations" in step 4). It also adds
+the SOP account numbers to each vendor organization (`--skip-accounts` to skip). A dry run
+validates and prints what it would create; nothing is written without `--live`. Orders are
+created Pending, and the ongoing-order settings are applied directly to each line, so `finish`
+has no ongoing conversion on this route; it only writes `out/pol_export.csv`. With
+`--use-marc`, `load` uploads the MARC files and `finish` converts the POs to ongoing as
+before. The adapter can also be run directly:
+`.venv/bin/python -m pipeline.folio_orders_adapter --ini <tenant.ini> [--live]`.
 
 What a row becomes: Order Number -> PO number; FOLIO Org -> vendor; Title Name, ISSN,
 Title Number (+ type), Publisher Name, Start / Expiration Date, Total Cost, FOLIO Fund and
