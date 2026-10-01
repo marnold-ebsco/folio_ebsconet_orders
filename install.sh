@@ -8,12 +8,13 @@
 # (config, .ini, out/) alone. The venv is reused unless the interpreter changes or
 # --recreate-venv is passed.
 #
-# Both repos are private, so set GITHUB_TOKEN (a token with read access to
-# folio_ebsconet_orders and folio_orders_loader). It is only sent to github.com.
+# Both repos are public, so no token is needed. If they are ever made private
+# again, set GITHUB_TOKEN (read access to folio_ebsconet_orders and
+# folio_orders_loader); it is only sent to github.com. Unauthenticated GitHub API
+# calls are limited to 60 per hour per IP.
 #
 # Usage:
-#   export GITHUB_TOKEN=...
-#   curl -fsSL -H "Authorization: Bearer $GITHUB_TOKEN" \
+#   curl -fsSL \
 #     https://raw.githubusercontent.com/marnold-ebsco/folio_ebsconet_orders/main/install.sh | bash -s -- [options]
 #   ./install.sh [options]
 #
@@ -92,7 +93,6 @@ resolve_sha() {
     | "$PYTHON" -c "import json,sys; print(json.load(sys.stdin)['sha'])"
 }
 
-[[ -n "${GITHUB_TOKEN:-}" ]] || echo "Note: GITHUB_TOKEN is not set; this works only if the repos are public."
 
 echo "Resolving latest commit for ${REPO}@${REF}..."
 REMOTE_SHA="$(resolve_sha "$REPO" "$REF")"
@@ -191,7 +191,7 @@ echo "${REMOTE_SHA}" > "${INSTALL_DIR}/${VERSION_MARKER}"
 # re-invoke -- fall back to re-fetching via curl in that case.
 case "$0" in
   *install.sh) RERUN_CMD="$0" ;;
-  *) RERUN_CMD="curl -fsSL -H \"Authorization: Bearer \$GITHUB_TOKEN\" https://raw.githubusercontent.com/${REPO}/main/install.sh | bash -s --" ;;
+  *) RERUN_CMD="curl -fsSL https://raw.githubusercontent.com/${REPO}/main/install.sh | bash -s --" ;;
 esac
 
 cat <<EOF

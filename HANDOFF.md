@@ -40,8 +40,8 @@ tool; inline quoting and heredocs with backticks break.
   bundle build `packaging/` was deleted; on `main` since `76eb911`, not yet tried on a real EC2):**
   fetches the app tarball pinned to a commit SHA from the GitHub API (no tests, `packaging`,
   dev docs) plus the `folio_orders_loader` tag read from the `requirements.txt` pin, over HTTPS
-  (no git or SSH key). Repos are private: the server needs `GITHUB_TOKEN` (read access to both
-  repos), or make them public. Options `--dir` (alias `--prefix`), `--python`, `--ref`,
+  (no git or SSH key). Repos are public, so no token is needed (60 API calls/hour/IP
+  unauthenticated); if made private again the server needs `GITHUB_TOKEN` (read access to both). Options `--dir` (alias `--prefix`), `--python`, `--ref`,
   `--recreate-venv`, `--check`; SHA kept in `.ebsconet_install_version`. Layout
   `~/ebsconet/{app,venv,work}`, `ebsconet` linked into `~/.local/bin`; re-running upgrades code
   and deps and leaves `work/` alone. Loader is always force-reinstalled (pip builds its

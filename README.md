@@ -12,12 +12,12 @@ status), [docs/CLIENT_GUIDE.md](docs/CLIENT_GUIDE.md) (plain-language guide for 
 ## Installing on a server
 `install.sh` fetches the committed code (pinned to one commit SHA) and the pinned
 `folio_orders_loader` straight from GitHub, so the server needs only curl, tar and Python 3.12+
-(no git, SSH key or clone). Both repos are private: set `GITHUB_TOKEN` to a token with read access
-to `folio_ebsconet_orders` and `folio_orders_loader`.
+(no git, SSH key or clone). Both repos are public, so no token is needed (unauthenticated GitHub
+API calls are limited to 60 per hour per IP). If they are made private again, set `GITHUB_TOKEN`
+to a token with read access to both; the installer sends it automatically.
 
 ```
-export GITHUB_TOKEN=...
-curl -fsSL -H "Authorization: Bearer $GITHUB_TOKEN"   https://raw.githubusercontent.com/marnold-ebsco/folio_ebsconet_orders/main/install.sh | bash -s -- [options]
+curl -fsSL https://raw.githubusercontent.com/marnold-ebsco/folio_ebsconet_orders/main/install.sh | bash -s -- [options]
 ```
 
 Options: `--dir PATH` (default `~/ebsconet`), `--python NAME`, `--ref REF` (branch or tag),
