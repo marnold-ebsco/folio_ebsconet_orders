@@ -174,37 +174,14 @@ def write_accounts_log(folder, started, ended, live, ini, workbooks, report):
     return path
 
 
-def check_dry_run_budgets(results, lines, resolver, check=None):
-    """Turn dry-run POs whose fund / expense class FOLIO would reject into 'invalid'.
-
-    The loader's load() does not look at budgets (only its CLI validate does), so a dry run
-    would otherwise report 'dry-run' for a PO that fails with budgetExpenseClassNotFound
-    once --live posts it. `check` defaults to folio_orders_loader.budgets.check_budgets.
-    """
-    if check is None:
-        from folio_orders_loader.budgets import check_budgets as check
-    from folio_orders_loader.records import group_by_po
-
-    pos, _ = group_by_po(lines)
-    checked = []
-    for po, status, detail in results:
-        if status == "dry-run":
-            errors = check(pos[po], resolver)
-            if errors:
-                status, detail = "invalid", "; ".join(errors)
-        checked.append((po, status, detail))
-    return checked
-
-
 def load_orders(in_dir, ini, cfg, live, skip_accounts=False):
     """Add vendor accounts, then create the POs through the Orders API.
 
-    Returns the loader's [(po_number, status, detail)] list. A dry run also checks each
-    fund / expense class for an Active budget (see check_dry_run_budgets).
+    Returns the loader's [(po_number, status, detail)] list. The loader checks each
+    fund / expense class for an Active budget first (check_budget=True), on dry run and live.
     """
     from folio_orders_loader.client import connect
     from folio_orders_loader.loader import load
-    from folio_orders_loader.lookups import Resolver
 
     lines = workbook_lines(in_dir, cfg)
     print("%d lines from %s" % (len(lines), in_dir))
@@ -223,10 +200,7 @@ def load_orders(in_dir, ini, cfg, live, skip_accounts=False):
         log = write_accounts_log(Path(in_dir) / "logs", started, datetime.now(), live,
                                  ini, in_dir, report)
         print("accounts log: %s" % log)
-    results = load(client, lines, live=live)
-    if not live:
-        results = check_dry_run_budgets(results, lines, Resolver(client))
-    return results
+    return load(client, lines, live=live, check_budget=True)
 
 
 def main(argv=None):

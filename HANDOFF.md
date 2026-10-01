@@ -12,7 +12,7 @@ GitHub `marnold-ebsco/folio_ebsconet_orders`, SSH remote only. Run everything wi
 tool; inline quoting and heredocs with backticks break.
 
 - Merged to `main` 2026-10-01 (fast-forward, `8d58b75`; the `api-load-default` branch is deleted).
-  Loader pinned to v0.3.1. The **Orders API is the default load**; the MARC / Data Import
+  Loader pinned to v0.3.2. The **Orders API is the default load**; the MARC / Data Import
   route is the backup (`--use-marc`). 199 tests pass, flake8 clean.
   MARC / Data Import route is the backup (`--use-marc`). 197 tests pass, flake8 clean.
 - `ebsconet.py load` / `finish` use `pipeline/folio_orders_adapter.py` `load_orders()`.
@@ -28,13 +28,11 @@ tool; inline quoting and heredocs with backticks break.
   summary log was offered, not built.
 - Docs: `README.md` is an index; `README_API.md` and `README_DATA_IMPORT.md` are standalone
   guides (Setup near the top); `RUNBOOK.md`, `PLAN.md`, `docs/CLIENT_GUIDE.md`.
-- **Dry-run checks:** the adapter dry run looks up fund, expense class, org, location and
-  material type (`lookup-failed`), and `check_dry_run_budgets()` in the adapter runs the
-  loader's `budgets.check_budgets` on every `dry-run` PO and reports a missing Active budget
-  or unlisted expense class as `invalid`. The loader's `load()` itself does not check budgets,
-  so this is dry run only; on `--live` FOLIO rejects such a PO with `budgetExpenseClassNotFound`
-  (clean 400, nothing created). Verified on bugfest: 140/140 stay `dry-run`, and fund
-  ZSS2025 + `access` is flagged. Not yet tried on a tenant with real budget limits.
+- **Budget checks:** the adapter calls the loader's `load(..., check_budget=True)` (loader v0.3.2),
+  so every PO (dry run and `--live`) is checked for an Active budget per fund and for a listed
+  expense class; failures are `invalid` and nothing is POSTed. Replaces the old adapter-side
+  `check_dry_run_budgets` (removed 2026-10-01). Blank expense classes skip the class half.
+  Not yet tried on a tenant with real budget limits.
 
 ## What the workflow does
 1. `ebsconet.py for-customer SOP.xlsx` writes up to three spreadsheets in `out/customer/`
@@ -92,8 +90,8 @@ tool; inline quoting and heredocs with backticks break.
       (a plain install does not upgrade).
    3. In `pipeline/folio_orders_adapter.py` (`row_to_line`, line ~43) leave
       `expense_class_code` blank when `cfg["rules"].get("use_expense_classes", True)` is
-      false, instead of using the cell or `default_expense_class`. `check_dry_run_budgets`
-      then relies on the loader's `check_budgets` skipping the class check for blank classes.
+      false, instead of using the cell or `default_expense_class`. the loader's `check_budgets`
+      (via `check_budget=True`) skipping the class check for blank classes.
    4. Tests: a `use_expense_classes: false` row gives no `expense_class_code`; classes still
       pass through when true. Run the suite and flake8 (`--max-line-length=100`).
    5. Read-only bugfest dry run of `out/three_type_test` with the setting both true (expect
