@@ -73,6 +73,13 @@ need "$PYTHON"
   exit 1
 }
 
+"$PYTHON" -c 'import venv, ensurepip' 2>/dev/null || {
+  echo "Error: this Python cannot create virtual environments (venv/ensurepip missing)." >&2
+  echo "On Debian/Ubuntu install it with:  sudo apt install python3-venv" >&2
+  echo "(or python3.12-venv for a specific version), then re-run this script." >&2
+  exit 1
+}
+
 # curl against api.github.com, authenticated when GITHUB_TOKEN is set.
 gh_curl() {
   local auth=()
