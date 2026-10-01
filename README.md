@@ -16,9 +16,19 @@ status), [docs/CLIENT_GUIDE.md](docs/CLIENT_GUIDE.md) (plain-language guide for 
 API calls are limited to 60 per hour per IP). If they are made private again, set `GITHUB_TOKEN`
 to a token with read access to both; the installer sends it automatically.
 
+Run it from the folder you want to install under. This creates `./ebsconet` there:
+
 ```
-curl -fsSL https://raw.githubusercontent.com/marnold-ebsco/folio_ebsconet_orders/main/install.sh | bash -s -- [options]
+curl -fsSL https://raw.githubusercontent.com/marnold-ebsco/folio_ebsconet_orders/main/install.sh | bash -s --
 ```
+
+To install directly into the current folder instead of a subfolder:
+
+```
+curl -fsSL https://raw.githubusercontent.com/marnold-ebsco/folio_ebsconet_orders/main/install.sh | bash -s -- --dir .
+```
+
+Any other option can be added after `--` (list below).
 
 Options: `--dir PATH` (default `./ebsconet` under the directory you run it from; `--dir .` installs directly into it), `--python NAME`, `--ref REF` (branch or tag),
 `--recreate-venv`, `--check` (report whether an update exists, change nothing). It installs
