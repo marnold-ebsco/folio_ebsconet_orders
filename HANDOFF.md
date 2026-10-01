@@ -14,7 +14,7 @@ tool; inline quoting and heredocs with backticks break.
 ## Current state
 - Branch `api-load-default`, pushed, NOT merged to `main`, no PR yet. `main` is at `84a99ac`
   (loader pinned to v0.3.0). The branch makes the **Orders API the default load**; the
-  MARC / Data Import route is the backup (`--use-marc`). 195 tests pass, flake8 clean.
+  MARC / Data Import route is the backup (`--use-marc`). 197 tests pass, flake8 clean.
 - `ebsconet.py load` / `finish` use `pipeline/folio_orders_adapter.py` `load_orders()`.
   `--use-marc` on both selects the MARC route. `--skip-accounts` skips the vendor-account
   step. `load` processes every PO, then exits 1 if any is invalid / lookup-failed / error /
@@ -28,12 +28,13 @@ tool; inline quoting and heredocs with backticks break.
   summary log was offered, not built.
 - Docs: `README.md` is an index; `README_API.md` and `README_DATA_IMPORT.md` are standalone
   guides (Setup near the top); `RUNBOOK.md`, `PLAN.md`, `docs/CLIENT_GUIDE.md`.
-- **Dry-run limits:** the adapter dry run looks up fund, expense class, org, location and
-  material type (`lookup-failed`) but does NOT check that a fund has an Active budget listing
-  the expense class. That check exists only in the loader CLI `validate`
-  (`budgets.check_budgets`). FOLIO rejects it at `--live` time with `budgetExpenseClassNotFound`
-  (a clean 400, nothing created for that PO). `README_API.md` says so. Possible follow-up:
-  call `check_budgets` from the adapter dry run.
+- **Dry-run checks:** the adapter dry run looks up fund, expense class, org, location and
+  material type (`lookup-failed`), and `check_dry_run_budgets()` in the adapter runs the
+  loader's `budgets.check_budgets` on every `dry-run` PO and reports a missing Active budget
+  or unlisted expense class as `invalid`. The loader's `load()` itself does not check budgets,
+  so this is dry run only; on `--live` FOLIO rejects such a PO with `budgetExpenseClassNotFound`
+  (clean 400, nothing created). Verified on bugfest: 140/140 stay `dry-run`, and fund
+  ZSS2025 + `access` is flagged. Not yet tried on a tenant with real budget limits.
 
 ## What the workflow does
 1. `ebsconet.py for-customer SOP.xlsx` writes up to three spreadsheets in `out/customer/`
@@ -79,8 +80,7 @@ tool; inline quoting and heredocs with backticks break.
    Suggested order: adapter dry run, then a small batch (5-7 POs, one per format) from `/tmp`,
    check in the UI, delete with `folio_delete_orders.py` (dry run, then `--live`). Tenant codes
    (vendor, fund, expense class, location, acquisition method) will differ: edit a copy of
-   `ebsconet_config.json`, keep the `.ini` outside the repos. Remember the dry run does not
-   check budgets (see above). Then delete `out/three_type_test/*.xlsx`.
+   `ebsconet_config.json`, keep the `.ini` outside the repos. Then delete `out/three_type_test/*.xlsx`.
 3. Docs: `RUNBOOK.md` "Lessons" and some MARC-only tool rows are labelled but not rewritten.
 4. Review `docs/CLIENT_GUIDE.md` before it goes to a library; real-tenant config values,
    repeated order numbers and the real tenant's permissions (`PLAN.md`); whether ongoing

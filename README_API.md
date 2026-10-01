@@ -151,10 +151,11 @@ the `folio_orders_loader` package, which validates them against the tenant and c
 orders. **Always run the dry run first**: it validates every PO, looks up the tenant codes
 and prints what it would create; nothing is written without `--live`. Fix any reported
 `invalid` or `lookup-failed` PO (a mistyped or missing fund, expense class, organization,
-location or material type) by correcting the spreadsheet or the tenant, re-run `build`, and
-repeat until the dry run is clean. The dry run does **not** check that a fund has an Active
-budget listing the expense class: FOLIO rejects that at `--live` time with
-`budgetExpenseClassNotFound` (a clean 400; nothing is created for that PO). Long live loads can exceed a terminal's time limit: run them in the background or a
+location or material type; a fund with no Active budget for the current fiscal year, or whose
+budget does not list the expense class as Active) by correcting the spreadsheet or the
+tenant, re-run `build`, and repeat until the dry run is clean. The budget check is dry run
+only; on `--live` FOLIO itself rejects such a PO with `budgetExpenseClassNotFound` (a clean
+400; nothing is created for that PO). Long live loads can exceed a terminal's time limit: run them in the background or a
 second terminal and read the result afterwards.
 
 What a row becomes: Order Number -> PO number; FOLIO Org -> vendor; Title Name -> title;
