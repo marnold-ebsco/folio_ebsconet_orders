@@ -42,6 +42,10 @@ cp -r "$HERE/app" "$PREFIX/app"
 [ -x "$PREFIX/venv/bin/python" ] || "$PYTHON" -m venv "$PREFIX/venv"
 "$PREFIX/venv/bin/python" -m pip install --quiet --upgrade \
     --find-links "$HERE/wheelhouse" -r "$PREFIX/app/requirements.txt"
+# The loader is reinstalled every time so changed code under an unchanged version
+# number cannot be skipped by pip.
+"$PREFIX/venv/bin/python" -m pip install --quiet --force-reinstall --no-deps \
+    --no-index --find-links "$HERE/wheelhouse" folio_orders_loader
 
 # Seed the working folder once.
 [ -e "$PREFIX/work/ebsconet_config.json" ] || \
