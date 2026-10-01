@@ -81,12 +81,28 @@ tool; inline quoting and heredocs with backticks break.
    check in the UI, delete with `folio_delete_orders.py` (dry run, then `--live`). Tenant codes
    (vendor, fund, expense class, location, acquisition method) will differ: edit a copy of
    `ebsconet_config.json`, keep the `.ini` outside the repos. Then delete `out/three_type_test/*.xlsx`.
-2b. **Expense classes are optional in FOLIO, but the loader requires one** (blank class =>
-   `invalid`). The adapter ignores `rules.use_expense_classes: false` (falls back to
-   `default_expense_class`). Fix is a loader change (v0.3.1, handed to the loader-CLI session:
-   see `~/scratch/folio_orders/HANDOFF.md` "NEXT"), then here: bump the pin and make the
-   adapter leave `expense_class_code` blank when the setting is false. Do this BEFORE the
-   real-tenant test if that tenant does not use expense classes.
+2b. **NEXT (EBSCOnet side): make expense classes optional.** FOLIO does not require them but
+   the old loader did (blank class => `invalid`), and the adapter ignored
+   `rules.use_expense_classes: false` (it fell back to `default_expense_class`). The loader
+   fix (v0.3.1) was done in the separate loader-CLI session; see
+   `~/scratch/folio_orders/HANDOFF.md`. Do here, in order:
+   1. Confirm the `v0.3.1` tag exists on `marnold-ebsco/folio_orders_loader`
+      (`git ls-remote --tags git@github.com:marnold-ebsco/folio_orders_loader.git`). If not,
+      stop: the loader session is not finished.
+   2. Bump `requirements.txt` to `@v0.3.1`, then
+      `.venv/bin/pip install --force-reinstall --no-deps <the requirements line>`
+      (a plain install does not upgrade).
+   3. In `pipeline/folio_orders_adapter.py` (`row_to_line`, line ~43) leave
+      `expense_class_code` blank when `cfg["rules"].get("use_expense_classes", True)` is
+      false, instead of using the cell or `default_expense_class`. `check_dry_run_budgets`
+      then relies on the loader's `check_budgets` skipping the class check for blank classes.
+   4. Tests: a `use_expense_classes: false` row gives no `expense_class_code`; classes still
+      pass through when true. Run the suite and flake8 (`--max-line-length=100`).
+   5. Read-only bugfest dry run of `out/three_type_test` with the setting both true (expect
+      140 `dry-run`) and false (expect 140 `dry-run`, no class on the lines).
+   6. Update `README_API.md` if wording needs it (it already says no class is put on lines),
+      this file, and commit. Do this BEFORE the real-tenant test if that tenant does not use
+      expense classes.
 3. Docs: `RUNBOOK.md` "Lessons" and some MARC-only tool rows are labelled but not rewritten.
 4. Review `docs/CLIENT_GUIDE.md` before it goes to a library; real-tenant config values,
    repeated order numbers and the real tenant's permissions (`PLAN.md`); whether ongoing
