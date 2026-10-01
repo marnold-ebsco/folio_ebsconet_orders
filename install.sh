@@ -19,7 +19,8 @@
 #   ./install.sh [options]
 #
 # Options:
-#   --dir PATH         Install location (default: ~/ebsconet)
+#   --dir PATH         Install location (default: ./ebsconet in the current directory;
+#                      use --dir . to install directly into it)
 #   --python NAME      Python interpreter, 3.12+ (default: python3)
 #   --ref REF          Branch or tag to install from (default: main)
 #   --recreate-venv    Delete and rebuild the venv even if one exists
@@ -36,7 +37,7 @@
 set -euo pipefail
 
 REPO="marnold-ebsco/folio_ebsconet_orders"
-INSTALL_DIR="$HOME/ebsconet"
+INSTALL_DIR="$PWD/ebsconet"
 PYTHON="${PYTHON:-python3}"
 REF="main"
 RECREATE_VENV=0
@@ -60,6 +61,9 @@ while [[ $# -gt 0 ]]; do
     *) echo "Unknown option: $1" >&2; usage; exit 1 ;;
   esac
 done
+
+# The command wrapper embeds INSTALL_DIR, so it must be absolute (e.g. --dir .).
+INSTALL_DIR="$(realpath -m "$INSTALL_DIR")"
 
 need() {
   command -v "$1" >/dev/null 2>&1 || { echo "Error: '$1' is required but not found on PATH." >&2; exit 1; }

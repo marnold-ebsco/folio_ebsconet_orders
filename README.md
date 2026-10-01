@@ -20,7 +20,7 @@ to a token with read access to both; the installer sends it automatically.
 curl -fsSL https://raw.githubusercontent.com/marnold-ebsco/folio_ebsconet_orders/main/install.sh | bash -s -- [options]
 ```
 
-Options: `--dir PATH` (default `~/ebsconet`), `--python NAME`, `--ref REF` (branch or tag),
+Options: `--dir PATH` (default `./ebsconet` under the directory you run it from; `--dir .` installs directly into it), `--python NAME`, `--ref REF` (branch or tag),
 `--recreate-venv`, `--check` (report whether an update exists, change nothing). It installs
 `app/`, `venv/` and `work/` and links `ebsconet` into `~/.local/bin`. Re-running upgrades the
 code and leaves `work/` (config, `.ini` files, `out/`) untouched. Push before installing: it
