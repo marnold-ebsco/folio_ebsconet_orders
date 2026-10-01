@@ -79,7 +79,7 @@ tool; inline quoting and heredocs with backticks break.
    check in the UI, delete with `folio_delete_orders.py` (dry run, then `--live`). Tenant codes
    (vendor, fund, expense class, location, acquisition method) will differ: edit a copy of
    `ebsconet_config.json`, keep the `.ini` outside the repos. Then delete `out/three_type_test/*.xlsx`.
-2b. **DONE 2026-10-01 incl. step 5 (bugfest dry run: 140 dry-run with classes on and off): expense classes optional.** FOLIO does not require them but
+2b. **DONE 2026-10-01 incl. step 5 (bugfest dry run: 140 dry-run with classes on and off): expense classes optional; loader live-verified too (blank-class PO loaded and opened on bugfest, loader v0.3.2 adds opt-in check_budget).** FOLIO does not require them but
    the old loader did (blank class => `invalid`), and the adapter ignored
    `rules.use_expense_classes: false` (it fell back to `default_expense_class`). The loader
    fix (v0.3.1) was done in the separate loader-CLI session; see
