@@ -13,7 +13,17 @@ tool; inline quoting and heredocs with backticks break.
 
 - Merged to `main` 2026-10-01 (fast-forward, `8d58b75`; the `api-load-default` branch is deleted).
   Loader pinned to v0.3.2. The **Orders API is the default load**; the MARC / Data Import
-  route is the backup (`--use-marc`). 197 tests pass, flake8 clean.
+  route is the backup (`--use-marc`). 200 tests pass, flake8 clean.
+- **SOP heading validation (`fe2c5cc`, on `main`, pushed):** `ebsconet_prep.check_headers()` runs at
+  the start of `prepare()` and `prepare_for_customer()` and raises `ValueError` if a required SOP
+  heading is missing (`REQUIRED_COLUMNS`: title, issn, format, order_number, cost), listing the
+  missing and found headings. Other `columns` (package, url, descriptor, ...) may be absent and
+  read as blank. `folio_setup.accounts_from_workbooks()` now uses `columns.account` instead of a
+  hardcoded `"Account Number"`. To follow a renamed SOP heading, put a `columns` override in
+  the library's `work/ebsconet_config.json` (deep-merged over `pipeline/pipeline_config.json`;
+  survives `install.sh` upgrades, which replace `app/` but never overwrite `work/`). A separate
+  map file was considered and rejected as not worth it for one fixed SOP layout. Bundle rebuilt
+  from this commit (`dist/ebsconet-v0.3.0-23-gfe2c5cc.tar.gz`), not yet installed or tested on EC2.
 - `ebsconet.py load` / `finish` use `pipeline/folio_orders_adapter.py` `load_orders()`.
   `--use-marc` on both selects the MARC route. `--skip-accounts` skips the vendor-account
   step. `load` processes every PO, then exits 1 if any is invalid / lookup-failed / error /
