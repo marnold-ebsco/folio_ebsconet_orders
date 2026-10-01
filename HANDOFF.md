@@ -37,7 +37,7 @@ tool; inline quoting and heredocs with backticks break.
 - Docs: `README.md` is an index; `README_API.md` and `README_DATA_IMPORT.md` are standalone
   guides (Setup near the top); `RUNBOOK.md`, `PLAN.md`, `docs/CLIENT_GUIDE.md`.
 - **Installer (root `install.sh`, rewritten 2026-10-01 in the style of marc-repair's; the old
-  bundle build `packaging/` was deleted; not yet committed/pushed or tried on a real EC2):**
+  bundle build `packaging/` was deleted; on `main` since `76eb911`, not yet tried on a real EC2):**
   fetches the app tarball pinned to a commit SHA from the GitHub API (no tests, `packaging`,
   dev docs) plus the `folio_orders_loader` tag read from the `requirements.txt` pin, over HTTPS
   (no git or SSH key). Repos are private: the server needs `GITHUB_TOKEN` (read access to both
@@ -46,8 +46,12 @@ tool; inline quoting and heredocs with backticks break.
   `~/ebsconet/{app,venv,work}`, `ebsconet` linked into `~/.local/bin`; re-running upgrades code
   and deps and leaves `work/` alone. Loader is always force-reinstalled (pip builds its
   tarball, so the server needs PyPI). To ship a new loader: bump the loader tag, bump the pin
-  in `requirements.txt`, push, re-run `install.sh`. Verified only by `bash -n`, `--help` and
-  the pin-parsing sed; no live run yet.
+  in `requirements.txt`, push, re-run `install.sh`. Fails early with a friendly message
+  (`0648176`) if the interpreter is below 3.12 or cannot `import venv, ensurepip` (Debian/Ubuntu:
+  `sudo apt install python3-venv`). Tested into a temp dir with a `gh auth token` as
+  `GITHUB_TOKEN`: fresh install, `--check`, in-place re-run (`work/` kept), the loader imports,
+  and the venv-check error via a stub interpreter. Not tested: the update-available path, the
+  `curl | bash -s --` form, or a real EC2.
 - **Budget checks:** the adapter calls the loader's `load(..., check_budget=True)` (loader v0.3.2),
   so every PO (dry run and `--live`) is checked for an Active budget per fund and for a listed
   expense class; failures are `invalid` and nothing is POSTed. Replaces the old adapter-side
