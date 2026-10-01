@@ -53,6 +53,10 @@ the ones you run separately, when something needs fixing.
 ---
 
 ## A. One-time setup (per tenant)
+- [ ] On a server such as the EC2 (no clone, no git or SSH key): build a bundle on the dev
+      machine with `packaging/make_bundle.sh`, copy it over, unpack it and run its
+      `install.sh`, then work from `~/ebsconet/work`. Skip the next two items. See
+      "Installing on a server" in `README.md`.
 - [ ] `python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt`
 - [ ] `.venv/bin/python -m pytest -q` passes.
 - [ ] Copy `sample.ini` to `TENANT.ini`, fill it in (never commit it), and check the

@@ -29,6 +29,9 @@ Nothing is opened or encumbered. `RUNBOOK.md` is the step-by-step checklist and
   print / P-E lines.
 
 **Python environment**
+On a server where you do not want to clone the repo, use the bundle installer instead of the
+commands below: see "Installing on a server" in `README.md`.
+
 ```
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt

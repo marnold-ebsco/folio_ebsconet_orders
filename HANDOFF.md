@@ -37,7 +37,11 @@ tool; inline quoting and heredocs with backticks break.
   (config, `.ini`, `out/`) alone; run `ebsconet` from `work/` (relative config paths). Wheels
   match the build machine (Linux x86_64, Python 3.12); pip falls back to PyPI otherwise.
   Verified only by installing into a temp prefix here (`ebsconet --help` ran). `dist/` is
-  gitignored. Bump the loader pin in `requirements.txt` as before; the bundle follows it.
+  gitignored. To ship a new loader: bump the loader version and tag, bump the pin in
+`requirements.txt`, commit, rebuild, re-run `install.sh` on the server. `install.sh` always
+force-reinstalls the loader wheel (`5c2d249`), so the new code lands even if the version is
+unchanged; the venv's other dependencies upgrade only when their pinned version changes.
+Tested twice into a temp prefix, not against a same-version/changed-code loader.
 - **Budget checks:** the adapter calls the loader's `load(..., check_budget=True)` (loader v0.3.2),
   so every PO (dry run and `--live`) is checked for an Active budget per fund and for a listed
   expense class; failures are `invalid` and nothing is POSTed. Replaces the old adapter-side

@@ -9,7 +9,7 @@ PO / POL list EBSCONET needs. Pick the guide for the way you load orders:
 Also: [RUNBOOK.md](RUNBOOK.md) (start-to-finish checklist), [PLAN.md](PLAN.md) (design and
 status), [docs/CLIENT_GUIDE.md](docs/CLIENT_GUIDE.md) (plain-language guide for the customer).
 
-## Installing on a server without cloning the repo
+## Installing on a server
 `packaging/make_bundle.sh` (run on the dev machine) builds `dist/ebsconet-<version>.tar.gz`: the
 committed code plus a wheelhouse of all dependencies, including `folio_orders_loader`. On the
 server (Python 3.12+, no git or SSH key needed):
@@ -17,3 +17,8 @@ server (Python 3.12+, no git or SSH key needed):
 to `~/ebsconet` (`app/`, `venv/`, `work/`) and links `ebsconet` into `~/.local/bin`. Re-running
 upgrades the code and leaves `work/` (config, `.ini` files, `out/`) untouched. Commit before
 building: the bundle is made from `HEAD`.
+
+To ship a new `folio_orders_loader`: bump its version and tag, change the pin in
+`requirements.txt`, commit, rebuild the bundle and re-run `install.sh` on the server. The
+installer always force-reinstalls the loader, so its new code lands even if the version is
+unchanged.
