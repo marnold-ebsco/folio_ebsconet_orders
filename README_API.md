@@ -153,10 +153,10 @@ and prints what it would create; nothing is written without `--live`. Fix any re
 `invalid` or `lookup-failed` PO (a mistyped or missing fund, expense class, organization,
 location or material type; a fund with no Active budget for the current fiscal year, or whose
 budget does not list the expense class as Active) by correcting the spreadsheet or the
-tenant, re-run `build`, and repeat until the dry run is clean. The budget check is dry run
-only; on `--live` FOLIO itself rejects such a PO with `budgetExpenseClassNotFound` (a clean
-400; nothing is created for that PO). Long live loads can exceed a terminal's time limit: run them in the background or a
-second terminal and read the result afterwards.
+tenant, re-run `build`, and repeat until the dry run is clean. The budget check runs on
+every PO, in the dry run and with `--live`: a PO that fails it is `invalid` and nothing is
+created for it. Long live loads can exceed a terminal's time limit: run them in the background
+or a second terminal and read the result afterwards.
 
 What a row becomes: Order Number -> PO number; FOLIO Org -> vendor; Title Name -> title;
 ISSN and Title Number (with its type) -> product IDs; Publisher Name; Start / Expiration

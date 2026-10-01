@@ -13,8 +13,7 @@ tool; inline quoting and heredocs with backticks break.
 
 - Merged to `main` 2026-10-01 (fast-forward, `8d58b75`; the `api-load-default` branch is deleted).
   Loader pinned to v0.3.2. The **Orders API is the default load**; the MARC / Data Import
-  route is the backup (`--use-marc`). 199 tests pass, flake8 clean.
-  MARC / Data Import route is the backup (`--use-marc`). 197 tests pass, flake8 clean.
+  route is the backup (`--use-marc`). 197 tests pass, flake8 clean.
 - `ebsconet.py load` / `finish` use `pipeline/folio_orders_adapter.py` `load_orders()`.
   `--use-marc` on both selects the MARC route. `--skip-accounts` skips the vendor-account
   step. `load` processes every PO, then exits 1 if any is invalid / lookup-failed / error /
@@ -104,7 +103,8 @@ tool; inline quoting and heredocs with backticks break.
    6. Update `README_API.md` if wording needs it (it already says no class is put on lines),
       this file, and commit. Do this BEFORE the real-tenant test if that tenant does not use
       expense classes.
-3. Docs: `RUNBOOK.md` "Lessons" and some MARC-only tool rows are labelled but not rewritten.
+3. Docs: `RUNBOOK.md` "Lessons" rewritten 2026-10-01 (API and MARC sections); some MARC-only
+   tool rows in section D are labelled but not rewritten.
 4. Review `docs/CLIENT_GUIDE.md` before it goes to a library; real-tenant config values,
    repeated order numbers and the real tenant's permissions (`PLAN.md`); whether ongoing
    defaults need adjusting per library.
@@ -112,7 +112,7 @@ tool; inline quoting and heredocs with backticks break.
    reference numbers.
 
 ## Dependencies
-- `requirements.txt` pins `folio_orders_loader` by git tag (`@v0.3.0`). After a pin bump,
+- `requirements.txt` pins `folio_orders_loader` by git tag (`@v0.3.2`). After a pin bump,
   reinstall: `.venv/bin/pip install --force-reinstall --no-deps <requirements line>` (a plain
   install does not upgrade).
 - PO numbers must match `^[a-zA-Z0-9]{1,22}$` (no hyphens).
