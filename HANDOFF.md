@@ -81,6 +81,12 @@ tool; inline quoting and heredocs with backticks break.
    check in the UI, delete with `folio_delete_orders.py` (dry run, then `--live`). Tenant codes
    (vendor, fund, expense class, location, acquisition method) will differ: edit a copy of
    `ebsconet_config.json`, keep the `.ini` outside the repos. Then delete `out/three_type_test/*.xlsx`.
+2b. **Expense classes are optional in FOLIO, but the loader requires one** (blank class =>
+   `invalid`). The adapter ignores `rules.use_expense_classes: false` (falls back to
+   `default_expense_class`). Fix is a loader change (v0.3.1, handed to the loader-CLI session:
+   see `~/scratch/folio_orders/HANDOFF.md` "NEXT"), then here: bump the pin and make the
+   adapter leave `expense_class_code` blank when the setting is false. Do this BEFORE the
+   real-tenant test if that tenant does not use expense classes.
 3. Docs: `RUNBOOK.md` "Lessons" and some MARC-only tool rows are labelled but not rewritten.
 4. Review `docs/CLIENT_GUIDE.md` before it goes to a library; real-tenant config values,
    repeated order numbers and the real tenant's permissions (`PLAN.md`); whether ongoing
