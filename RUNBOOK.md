@@ -268,11 +268,30 @@ files together (or use a separate `--out` folder per SOP, e.g. `--out out/2026-s
 | `import_logs/*.csv` | load --use-marc | MARC route: audit log of each import |
 | `ongoing_log.csv` | finish --use-marc | MARC route: conversion results |
 
-## Lessons from the bugfest trials (MARC route)
+## Lessons from the bugfest trials
+
+### Orders API route (default)
+- Budgets are checked on every PO, in the dry run and with `--live` (loader `check_budget`).
+  A fund with no Active budget for the current fiscal year, or one that does not list the
+  expense class, makes the PO `invalid` and nothing is POSTed. Blank expense classes skip the
+  class check. Bugfest allows overspend and is lenient, so a real tenant may reject more than
+  the bugfest dry run did.
+- Expense classes are optional. Set `rules.use_expense_classes` to `false` in the config for a
+  tenant that does not use them; the lines then carry no class.
+- PO numbers must be 1-22 letters and digits (no hyphens).
+- SOP `Account Number` becomes the line's vendor account; `load` adds any missing account to the
+  organization (skip with `--skip-accounts`) and logs it in `logs/accounts_<timestamp>.txt`.
+  Reference numbers are not mapped (the SOP has no column for them).
+- `load` processes every PO before exiting 1 if any failed; re-runs skip POs that already exist,
+  so fix the cause and run it again.
+- After bumping the `folio_orders_loader` pin in `requirements.txt`, reinstall with
+  `pip install --force-reinstall --no-deps <requirements line>`; a plain install does not upgrade.
+
+### MARC / Data Import route (`--use-marc`)
 - A fund without an Active budget containing the expense class: the PO is created but its
   line is discarded ("Budget expense class not found"). Preflight checks this.
 - FOLIO rejects `HTTP://WWW...` resource URLs (lowercase scheme and host required); the
-  build fixes this. PO numbers must be 1-22 letters and digits.
+  build fixes this.
 - One PO with one line per MARC record: a repeated order number is discarded on the
   second record (use `folio_add_po_lines.py`).
 - Bugfest splits files (parent + child jobs); the loader handles it.
