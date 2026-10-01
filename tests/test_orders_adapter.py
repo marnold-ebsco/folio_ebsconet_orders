@@ -103,3 +103,12 @@ def test_accounts_log_is_timestamped_and_lists_accounts(tmp_path):
     dry = write_accounts_log(tmp_path, start, start, False, "t.ini", "out", report)
     assert "DRY RUN" in dry.read_text(encoding="utf-8")
     assert format_elapsed(3725) == "1:02:05"
+
+
+def test_expense_class_passes_through_when_enabled():
+    assert row_to_line(ROW, "online", CFG)["expense_class_code"] == "GEN"
+
+
+def test_no_expense_class_when_disabled():
+    cfg = {**CFG, "rules": {**CFG["rules"], "use_expense_classes": False}}
+    assert not row_to_line(ROW, "online", cfg)["expense_class_code"]

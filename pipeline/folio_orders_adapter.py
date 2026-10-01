@@ -40,7 +40,9 @@ def row_to_line(row, route, cfg):
 
     order_type = _text(row, add["order_type"]) or ongoing["default_order_type"]
     org = _text(row, add["org"]) or cfg.get("default_org")
-    expense = _text(row, add["expense_class"]) or cfg.get("default_expense_class")
+    expense = ""
+    if cfg.get("rules", {}).get("use_expense_classes", True):
+        expense = _text(row, add["expense_class"]) or cfg.get("default_expense_class")
     physical = route != "online"
 
     product_ids = []
