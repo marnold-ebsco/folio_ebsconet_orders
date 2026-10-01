@@ -127,7 +127,7 @@ Tested twice into a temp prefix, not against a same-version/changed-code loader.
    reference numbers.
 
 ## Dependencies
-- `requirements.txt` pins `folio_orders_loader` by git tag (`@v0.3.2`). After a pin bump,
+- `requirements.txt` pins `folio_orders_loader` by git tag (`@v0.3.4`). After a pin bump,
   reinstall: `.venv/bin/pip install --force-reinstall --no-deps <requirements line>` (a plain
   install does not upgrade).
 - PO numbers must match `^[a-zA-Z0-9]{1,22}$` (no hyphens).
