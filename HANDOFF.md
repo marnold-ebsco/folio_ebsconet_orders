@@ -52,7 +52,8 @@ tool; inline quoting and heredocs with backticks break.
   `GITHUB_TOKEN`: fresh install, `--check`, in-place re-run (`work/` kept), the loader imports,
   the venv-check error via a stub interpreter, and the update path (installed `--ref 76eb911`,
   then `--check` reported the update without changing anything, then a plain run upgraded to
-  `main` and kept `work/`). Not tested: the `curl | bash -s --` form, or a real EC2.
+  `main` and kept `work/`), and the README `curl ... | bash -s --` one-liner (fresh install; it
+  printed curl-form re-run hints with a literal `$GITHUB_TOKEN`). Not tested: a real EC2.
 - **Budget checks:** the adapter calls the loader's `load(..., check_budget=True)` (loader v0.3.2),
   so every PO (dry run and `--live`) is checked for an Active budget per fund and for a listed
   expense class; failures are `invalid` and nothing is POSTed. Replaces the old adapter-side
