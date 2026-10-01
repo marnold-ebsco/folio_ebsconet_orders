@@ -11,6 +11,7 @@ from pathlib import Path
 
 from pipeline.ebsconet_prep import blank, load_config
 from pipeline.ebsconet_to_marc import fmt_value, read_rows
+from pipeline.folio_setup import add_accounts
 
 ROUTE_FORMAT = {
     "online": "Electronic Resource",
@@ -69,6 +70,8 @@ def row_to_line(row, route, cfg):
         "cancellation_restriction": _text(
             row, add["cancellation_restriction"]).lower() in ("yes", "true", "1"),
     }
+    if _text(row, col["account"]):
+        line["vendor_account"] = _text(row, col["account"])
     if order_type == "Ongoing":
         interval = _text(row, add["renewal_interval"]) or ongoing["interval_days"]
         line["interval_days"] = int(float(interval))
@@ -96,6 +99,33 @@ def workbook_lines(in_dir, cfg):
     return lines
 
 
+def accounts_by_org(lines):
+    """{org code: sorted account numbers} for the lines that carry a vendor account."""
+    found = {}
+    for line in lines:
+        if line.get("vendor_account") and line.get("vendor_code"):
+            found.setdefault(line["vendor_code"], set()).add(line["vendor_account"])
+    return {code: sorted(numbers) for code, numbers in found.items()}
+
+
+def ensure_accounts(client, lines, payment_method, live):
+    """Add each line's account number to its vendor organization if it is missing.
+
+    Returns [(org code, added, already_there)]; an organization that is not found is
+    reported with added=None and left for the loader's own checks to reject.
+    """
+    report = []
+    for code, numbers in sorted(accounts_by_org(lines).items()):
+        found = client.folio_get("/organizations/organizations", key="organizations",
+                                 query_params={"query": 'code=="%s"' % code, "limit": 2})
+        if not found:
+            report.append((code, None, []))
+            continue
+        added, have = add_accounts(client, found[0], numbers, payment_method, live)
+        report.append((code, added, have))
+    return report
+
+
 def main(argv=None):
     from folio_orders_loader.client import connect
     from folio_orders_loader.loader import load
@@ -105,11 +135,22 @@ def main(argv=None):
     p.add_argument("--config", default="ebsconet_config.json")
     p.add_argument("--ini", required=True, help="tenant .ini file")
     p.add_argument("--live", action="store_true", help="really POST (default: dry run)")
+    p.add_argument("--skip-accounts", action="store_true",
+                   help="do not add the SOP account numbers to the vendor organizations")
     args = p.parse_args(argv)
     cfg = load_config(args.config)
     lines = workbook_lines(args.in_dir, cfg)
     print("%d lines from %s" % (len(lines), args.in_dir))
-    results = load(connect(args.ini), lines, live=args.live)
+    client = connect(args.ini)
+    if not args.skip_accounts:
+        payment = cfg["folio"]["account_payment_method"]
+        for code, added, have in ensure_accounts(client, lines, payment, args.live):
+            if added is None:
+                print("organization %s not found; accounts not added" % code)
+            else:
+                print("accounts on %s: %d %s, %d already present" % (
+                    code, len(added), "added" if args.live else "to add", len(have)))
+    results = load(client, lines, live=args.live)
     for r in results:
         print(r)
     return 0

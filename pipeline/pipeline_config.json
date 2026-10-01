@@ -12,6 +12,7 @@
     "publisher": "Publisher Name",
     "subject": "Subject Category",
     "order_number": "Order Number",
+    "account": "Account Number",
     "url": "URL",
     "cancellable": "Cancellable",
     "descriptor": "Descriptor",

@@ -48,6 +48,7 @@ The per-step sections below describe each step's behavior and options. Their com
 | - Remove empty product IDs | `pipeline/folio_clean_product_ids.py` | tested live; runs after each load |
 | - Retry failed records | `folio_retry_failed.py` | tested live |
 | - Remove bad POs/lines | `folio_delete_orders.py` | tested live (PO and line delete) |
+| - Alternative load via Orders API | `pipeline/folio_orders_adapter.py` | tested live (adds vendor accounts too) |
 
 Start-to-finish checklist: see `RUNBOOK.md`.
 
@@ -281,6 +282,47 @@ entries as a safety net. Run the cleaner on its own for earlier loads:
 
 `folio_setup.py --update-mappings --live` overwrites existing mapping profiles with the
 current build (used after changing the mapping).
+
+## Alternative load: the Orders API (`pipeline/folio_orders_adapter.py`)
+```
+.venv/bin/python -m pipeline.folio_orders_adapter --ini <tenant.ini>            # dry run
+.venv/bin/python -m pipeline.folio_orders_adapter --ini <tenant.ini> --live     # POSTs
+```
+An alternative to MARC / Data Import. It reads the same prep workbooks `build` writes
+(`out/library-EBSCONET_online.xlsx`, `library-EBSCONET-print.xlsx`, `..._P-E.xlsx`; `--in-dir` to read
+another folder), maps each row to a neutral line record and hands the records to the
+separate `folio_orders_loader` package (pinned by git tag in `requirements.txt`), which
+validates them and creates the orders through the Orders API. It needs no `setup` profiles
+and no job profile, and **several rows with the same Order Number become extra lines of one
+PO**, which Data Import cannot do (see "Known limitations" in step 4). A dry run validates
+and prints what it would create; nothing is written without `--live`. Orders are created
+Pending. The `ebsconet.py` commands `setup`, `load` and `finish` belong to the Data Import
+route; the ongoing-order settings are applied directly to each line instead.
+
+What a row becomes: Order Number -> PO number; FOLIO Org -> vendor; Title Name, ISSN,
+Title Number (+ type), Publisher Name, Start / Expiration Date, Total Cost, FOLIO Fund and
+Expense Class, FOLIO Order Type / Renewal Interval, Cancellation Restriction and PO Line
+Description as in the MARC route; format from the file (electronic, physical, P/E Mix);
+physical and P-E rows also get FOLIO Location and Material Type.
+
+**Vendor account.** The SOP's **Account Number** becomes the line's vendor account
+(`vendorDetail.vendorAccount`), as 990$a does in the MARC route. FOLIO stores the value
+whether or not the organization has such an account, so before loading the adapter adds
+each missing account number to the organization named on its lines (the line's FOLIO Org,
+not the `ebsconet` organization that `setup` uses), with payment method
+`folio.account_payment_method` and status Active. Organizations already holding the
+account are left alone. A dry run prints "N to add" and writes nothing; `--skip-accounts`
+turns the step off. An organization that cannot be found is reported and skipped (the
+loader rejects the line). Rows with no Account Number get no vendor account.
+
+**Reference numbers are not mapped.** The SOP has no reference-number column and the MARC
+route does not map one either. The loader supports vendor reference numbers
+(`vendor_reference_number` + `vendor_reference_type`); add a source column to
+`row_to_line` if a customer provides one.
+
+Tested live on bugfest: 140 POs created and deleted, and a 7-PO sample (electronic,
+physical, P-E) checked in the FOLIO UI; the account step was run live (account added to the
+organization, PO saved with the vendor account) and reverted.
 
 ## Removing problem orders (`folio_delete_orders.py`)
 List the POs / PO lines to remove in `orders_to_delete.csv`, then:

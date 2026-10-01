@@ -206,6 +206,7 @@ as is was made on 2026-09-30; revisit it if the renewal dates should work differ
 | Load the retry file | `.venv/bin/python -m pipeline.folio_import out/retry/<file>_retry.mrc --ini TENANT.ini --job-profile "EBSCONET order migration - Online"` (add `--live`) |
 | Empty product IDs on orders loaded another way | `.venv/bin/python -m pipeline.folio_clean_product_ids --csv po_numbers.csv --ini TENANT.ini --live` |
 | Test tenant: remove the test POs you loaded | `folio_cleanup_test_pos.py --ini TENANT.ini` (dry run) then `--live`. Test tenants only |
+| Several lines on one PO, or no Data Import profiles wanted | Load through the Orders API instead of MARC: `.venv/bin/python -m pipeline.folio_orders_adapter --ini TENANT.ini` (dry run), then `--live`. Reads the `build` workbooks in `out/`, adds the SOP account numbers to each line's vendor organization (`--skip-accounts` to skip). Use it instead of `load` / `finish`; see README "Alternative load" |
 | One step on its own (any `pipeline/` step) | `.venv/bin/python -m pipeline.<step> --help` |
 
 After fixing the cause, regenerate the `.mrc` if the data changed (`build` again), then
