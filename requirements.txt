@@ -2,4 +2,4 @@ openpyxl==3.1.5
 pymarc==5.4.0
 folioclient==1.0.13
 httpx==0.28.1
-folio_orders_loader @ git+ssh://git@github.com/marnold-ebsco/folio_orders_loader.git@v0.2.0
+folio_orders_loader @ git+ssh://git@github.com/marnold-ebsco/folio_orders_loader.git@v0.3.0
