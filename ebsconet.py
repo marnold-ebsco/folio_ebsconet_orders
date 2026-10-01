@@ -184,7 +184,9 @@ def build_parser():
                              ("finish", cmd_finish, "ongoing conversion and POL export")):
         s = sub.add_parser(name, help=text)
         s.add_argument("--ini", required=True, help="tenant .ini file")
-        s.add_argument("--live", action="store_true", help="write to FOLIO (default: dry run)")
+        s.add_argument("--live", action="store_true", help=(
+            "write to FOLIO (default: dry run)" if name != "finish" else
+            "--use-marc only: really convert the POs to ongoing (default: dry run)"))
         if name == "setup":
             s.add_argument("--update-mappings", action="store_true",
                            help="overwrite existing mapping profiles")

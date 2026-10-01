@@ -1,12 +1,13 @@
 """Map the prepared EBSCONET workbooks to folio_orders_loader's neutral line records.
 
-An alternative to the MARC / Data Import route: the rows of the prep workbooks
-(library-EBSCONET_online / -print / _P-E .xlsx) become line records that
-`folio_orders_loader.load()` posts through the Orders API, so repeated order numbers
-become extra lines of one PO. Nothing is written to FOLIO from here.
+The rows of the prep workbooks (library-EBSCONET_online / -print / _P-E .xlsx) become
+line records that `folio_orders_loader.load()` posts through the Orders API, so repeated
+order numbers become extra lines of one PO. Vendor accounts are added first and logged
+to logs/accounts_<timestamp>.txt.
 """
 import argparse
 import re
+from datetime import datetime
 from pathlib import Path
 
 from pipeline.ebsconet_prep import blank, load_config
@@ -127,6 +128,48 @@ def ensure_accounts(client, lines, payment_method, live):
 
 
 BAD_STATUS = ("invalid", "lookup-failed", "error", "open-error")
+STAMP = "%Y-%m-%d %H:%M:%S"
+
+
+def format_elapsed(seconds):
+    """Seconds -> 'H:MM:SS'."""
+    whole = int(round(seconds))
+    return "%d:%02d:%02d" % (whole // 3600, whole % 3600 // 60, whole % 60)
+
+
+def write_accounts_log(folder, started, ended, live, ini, workbooks, report):
+    """Write logs/accounts_<start>.txt describing the vendor-account step; returns its path.
+
+    report is ensure_accounts()'s [(org code, added, already_there)]. A dry run is logged
+    too, with 'would add' in place of 'added'.
+    """
+    path = Path(folder) / ("accounts_%s.txt" % started.strftime("%Y%m%d_%H%M%S"))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    verb = "added" if live else "would add"
+    total = sum(len(added) for _, added, _ in report if added)
+    out = [
+        "Vendor account log",
+        "Mode:      %s" % ("LIVE (organizations were changed)" if live
+                           else "DRY RUN (nothing was changed in FOLIO)"),
+        "Tenant ini: %s" % Path(ini).name,
+        "Workbooks: %s" % workbooks,
+        "Started:   %s" % started.strftime(STAMP),
+        "Ended:     %s" % ended.strftime(STAMP),
+        "Elapsed:   %s" % format_elapsed((ended - started).total_seconds()),
+        "",
+        "Organizations checked: %d; accounts %s: %d" % (len(report), verb, total),
+        "",
+    ]
+    for code, added, have in report:
+        if added is None:
+            out.append("%s: ORGANIZATION NOT FOUND - no accounts %s; POs for this "
+                       "vendor will be rejected" % (code, verb))
+            continue
+        out.append("%s: %d %s, %d already present" % (code, len(added), verb, len(have)))
+        out += ["    %s: %s" % (verb, n) for n in added]
+        out += ["    already present: %s" % n for n in have]
+    path.write_text("\n".join(out) + "\n", encoding="utf-8")
+    return path
 
 
 def load_orders(in_dir, ini, cfg, live, skip_accounts=False):
@@ -141,13 +184,19 @@ def load_orders(in_dir, ini, cfg, live, skip_accounts=False):
     print("%d lines from %s" % (len(lines), in_dir))
     client = connect(ini)
     if not skip_accounts:
+        started = datetime.now()
         payment = cfg["folio"]["account_payment_method"]
-        for code, added, have in ensure_accounts(client, lines, payment, live):
+        report = ensure_accounts(client, lines, payment, live)
+        for code, added, have in report:
             if added is None:
                 print("organization %s not found; accounts not added" % code)
             else:
-                print("accounts on %s: %d %s, %d already present" % (
-                    code, len(added), "added" if live else "to add", len(have)))
+                print("accounts on %s: %d %s%s, %d already present" % (
+                    code, len(added), "added" if live else "to add",
+                    " (%s)" % ", ".join(added) if added else "", len(have)))
+        log = write_accounts_log(Path(in_dir) / "logs", started, datetime.now(), live,
+                                 ini, in_dir, report)
+        print("accounts log: %s" % log)
     return load(client, lines, live=live)
 
 

@@ -1,13 +1,16 @@
 # EBSCOnet -> FOLIO (Sunflower) order migration: design and status
 
-Last updated 2026-09-30. `RUNBOOK.md` is the start-to-finish checklist; `README.md` is the
-how-to-run guide; this file records what was
+Last updated 2026-09-30. `RUNBOOK.md` is the start-to-finish checklist; `README_API.md` and
+`README_DATA_IMPORT.md` are the how-to-run guides; this file records what was
 built, why, and what is left.
 
 ## Goal
-Turn an EBSCONET SOP spreadsheet into MARC files that FOLIO Data Import loads as
-**Pending** purchase orders (one PO + one PO line per record), then convert them to
-ongoing orders and give EBSCONET the PO/POL numbers. This replaces the manual MarcEdit
+Turn an EBSCONET SOP spreadsheet into **Pending** purchase orders in FOLIO and give
+EBSCONET the PO/POL numbers. The default route creates the orders through the Orders API
+(`folio_orders_loader`, via `pipeline/folio_orders_adapter.py`), with the order type and
+renewal interval set at creation and several SOP rows per PO possible. The backup route
+(`--use-marc`) builds MARC files that FOLIO Data Import loads (one PO + one PO line per
+record) and then converts the POs to ongoing orders. Both replace the manual MarcEdit
 process in `EBSCOnetInstructions.txt` (not in the repo; internal).
 
 Rules: Python 3.12+, FolioClient for all FOLIO access, pytest, flake8, pure Python
@@ -18,10 +21,11 @@ except pymarc / openpyxl / httpx.
 adds the columns the customer fills in (FOLIO Org / Fund / Expense Class, highlighted).
 3. The customer fills them in line by line and returns the file. 4. `ebsconet.py build`
 processes it (remaining rules, the customer's values, split by format, MARC files).
-5. `ebsconet.py load` (dry run = preflight) reports errors such as mistyped codes; the
+5. `ebsconet.py load` (dry run) reports errors such as mistyped codes; the
 customer corrects and returns the file; repeat 4-5. 6. `ebsconet.py load --live`.
-7. `ebsconet.py finish --live` converts to ongoing orders and writes the PO / POL export.
-`ebsconet.py setup` creates the Data Import profiles once per tenant. The rehearsal used
+7. `ebsconet.py finish` writes the PO / POL export. With `--use-marc`, `load` runs the
+preflight and Data Import, `finish --live` converts the POs to ongoing orders, and
+`ebsconet.py setup` creates the Data Import profiles once per tenant. The MARC rehearsal used
 the test SOP with a simulated customer (three deliberate mistakes caught by preflight,
 then corrected): 4,735 lines -> 141 for the customer -> 140 loaded, all with PO lines,
 all converted to ongoing. `RUNBOOK.md` has the step-by-step version.
@@ -30,8 +34,12 @@ all converted to ongoing. `RUNBOOK.md` has the step-by-step version.
 the fix-up tools (retry, delete, add lines) and test-tenant tools stay in the root.
 
 ## Pipeline (all built and tested)
+The first row is the default route; rows 2-6 and the MARC-only tools belong to the backup
+`--use-marc` route.
+
 | Step | Script | Notes |
 |---|---|---|
+| API | `pipeline/folio_orders_adapter.py` | Default load: maps the build workbooks to line records for `folio_orders_loader` (Orders API), adds the SOP account numbers to the vendors and writes `out/logs/accounts_<timestamp>.txt` |
 | 1 | `pipeline/ebsconet_prep.py` | Add fund / expense class / org columns, apply row rules, ISO dates, normalize URLs, split by format into Online / Print / P-E workbooks, highlight mapped columns, write report + exclusions log |
 | 2 | `pipeline/ebsconet_to_marc.py` | Build `.mrc` + `.mrk` from the workbooks; tag map read from `order_marc_headers.xlsx` |
 | 3 | `pipeline/folio_setup.py` | Accounts on the ebsconet org; per route a field mapping, action and job profile (built from templates in `template_profiles/`) |
@@ -54,7 +62,7 @@ the fix-up tools (retry, delete, add lines) and test-tenant tools stay in the ro
 - **Zero-cost rows are not loaded**; package members at $0, "Fee" and unrecognized
   formats are not loaded. **Every other row is loaded; rows without an ISSN are logged**
   (`out/prep_no_issn.csv`). A row with neither an ISSN nor a title number gets a generated
-  product ID `NOISSN-<order number>` (type Local identifier). See "Data rules" in the README.
+  product ID `NOISSN-<order number>` (type Local identifier). See "Data rules" in README_API.md / README_DATA_IMPORT.md.
 - **Fund, expense class and org come from the customer's SOP columns** (FOLIO Fund /
   FOLIO Expense Class / FOLIO Org, filled line by line); the config values are only the
   fallback for blank cells. Fallbacks are logged (`out/prep_defaults_used.csv`).

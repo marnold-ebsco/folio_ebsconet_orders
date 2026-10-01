@@ -1,7 +1,7 @@
 # Runbook: EBSCONET SOP -> FOLIO orders
 
 The workflow from receiving the spreadsheet to handing EBSCONET the PO / POL numbers.
-`README.md` explains each script in detail; `PLAN.md` records the design and open
+`README_API.md` and `README_DATA_IMPORT.md` explain each script in detail; `PLAN.md` records the design and open
 decisions. Run everything from the repo folder with the venv (`.venv/bin/python ...`).
 `TENANT.ini` means your filled-in copy of `sample.ini`. Nothing is written to FOLIO
 unless a command says `--live`.
@@ -23,23 +23,27 @@ unless a command says `--live`.
                                                                    Type (physical, P-E)
                              4. receive the filled-in files  <--
                              5. ebsconet.py build FILLED*.xlsx
-                             6. ebsconet.py load --ini ...      (dry run = preflight)
+                             6. ebsconet.py load --ini ...      (dry run)
                                 errors? send the list back  ->  fixes the cells, returns
                                                                 the file; repeat 5-6
                              7. ebsconet.py load --ini ... --live
-                             8. ebsconet.py finish --ini ... --live
+                             8. ebsconet.py finish --ini ...
                              9. send out/pol_export.csv to EBSCONET
 ```
 
-One-time per tenant (before the first load): section A below, then
-`ebsconet.py setup --ini TENANT.ini --live`.
+`load` creates the orders through the Orders API. The MARC / Data Import route is the
+backup, selected with `--use-marc` on `load` and `finish` (see "Backup route" below).
+
+One-time per tenant (before the first load): section A below. The `setup --live` step
+(accounts and Data Import profiles) is needed only for the backup MARC route; the API
+`load` adds the vendor accounts itself.
 
 ### The five commands
 | Command | When | What it does | Writes to FOLIO? |
 |---|---|---|---|
 | `ebsconet.py for-customer SOP.xlsx` | step 2 | Removes every zero-dollar line; splits the rest into an **electronic**, a **physical** and a **P-E** spreadsheet, each with its own highlighted customer columns; logs what was removed or not sent | no |
 | `ebsconet.py build FILLED*.xlsx` | step 5 | Takes the customer's filled-in files (all three, or one), applies the remaining rules, uses the customer's values, builds the MARC files and `order_settings.csv` | no |
-| `ebsconet.py setup --ini TENANT.ini` | once per tenant | Adds the SOP's account numbers to the vendor organization; creates the Online / Print / P-E Data Import profiles | only with `--live` |
+| `ebsconet.py setup --ini TENANT.ini` | once per tenant | Adds the SOP's account numbers to the vendor organization; creates the Online / Print / P-E Data Import profiles (the profiles are needed only for `--use-marc`) | only with `--live` |
 | `ebsconet.py load --ini TENANT.ini` | steps 6-7 | Creates the POs through the Orders API (default; adds SOP account numbers to the vendors). With `--use-marc`, for each MARC file: preflight checks, then upload, import, verify, clean up empty product IDs, audit log | only with `--live` |
 | `ebsconet.py finish --ini TENANT.ini` | step 8 | Writes the PO / POL export for EBSCONET; with `--use-marc` it first converts the loaded POs to ongoing orders | ongoing conversion only with `--live` |
 
@@ -65,16 +69,18 @@ the ones you run separately, when something needs fixing.
 - [ ] The **location** and **material type** for print / P-E lines exist.
 - [ ] Note the ledger's "Restrict encumbrance" setting and the budgets' allowable-
       encumbrance %: they decide whether the orders can be *opened* later.
-- [ ] Your user can create Data Import profiles, run imports, and create / edit orders.
+- [ ] Your user can create / edit orders and organizations (accounts are added to the
+      vendor organizations). For the backup MARC route it must also be able to create Data
+      Import profiles and run imports.
 - [ ] Edit `ebsconet_config.json` (only this one: the fixed settings in
       `pipeline/pipeline_config.json` are the same for every library). The fund / expense-class / organization entries there
       are only the **defaults** used when the customer leaves a cell blank. Also set the
       `folio` section (location, material type, vendor org, acquisition method, payment
       method for new accounts), and `rules.use_expense_classes` (false if the tenant does
-      not use them). See the README ("Data rules").
-- [ ] `ebsconet.py setup --ini TENANT.ini`, read the plan, then add `--live`. Afterwards
-      check in FOLIO (Settings -> Data import) that the three job profiles exist and that
-      each mapping profile sets the PO status to **Pending**.
+      not use them). See "Data rules" in README_API.md or README_DATA_IMPORT.md.
+- [ ] Backup MARC route only: `ebsconet.py setup --ini TENANT.ini`, read the plan, then
+      add `--live`. Afterwards check in FOLIO (Settings -> Data import) that the three job
+      profiles exist and that each mapping profile sets the PO status to **Pending**.
 
 ## B. For each SOP
 
@@ -132,9 +138,42 @@ Nothing for us to do. A blank cell falls back to the defaults in the config.
       Usage Loading Service if switched on, ...).
 - [ ] Open a `.mrk` file in `out/marc/` and eyeball a few records.
 
-### 6. Dry-run the load (preflight)
-Steps 6-8 describe the backup MARC route (add `--use-marc` to `load` and `finish`). The default Orders API `load` works the same way (dry run, then `--live`) but has no preflight, no job profile and no ongoing conversion; `finish` only writes the POL export. See README "Default load".
+### 6. Dry-run the load
 - [ ] `.venv/bin/python ebsconet.py load --ini TENANT.ini`
+- [ ] The dry run validates every PO and looks up the codes in the tenant. It prints one
+      status per PO (`dry-run`, `exists`, `invalid`, `lookup-failed`) with the reason for
+      each problem, and shows which vendor accounts would be added. It writes
+      `out/logs/accounts_<timestamp>.txt` (mode, start / end / elapsed time, the account
+      numbers).
+- [ ] Send the error list to the customer (or fix the tenant setup), get a corrected file,
+      and repeat steps 5-6 until there are no `invalid` or `lookup-failed` POs.
+
+### 7. Load
+- [ ] `.venv/bin/python ebsconet.py load --ini TENANT.ini --live`. The vendor accounts are
+      added first, then the POs are created Pending with the order type and renewal
+      interval already set on the line. Several rows with one Order Number become extra
+      lines of one PO.
+- [ ] The summary counts the POs by status (`created`, `exists`, `error`, ...). A bad PO
+      does not stop the others, but the command then exits with 1. Fix the cause and run
+      the same command again: POs that already exist are skipped.
+- [ ] In FOLIO: search a few PO numbers in Orders. Confirm status **Pending**, order type,
+      vendor, fund and expense class, price, dates, location, account number.
+- [ ] Something failed? Section D.
+
+### 8-9. The EBSCONET hand-off
+- [ ] `.venv/bin/python ebsconet.py finish --ini TENANT.ini` writes `out/pol_export.csv`.
+      There is no ongoing conversion on this route (the settings were applied at load),
+      so `--live` changes nothing.
+- [ ] Send `out/pol_export.csv` to EBSCONET. The POL number is the PO number + `-1`;
+      any line not ending in `-1` is flagged `NO - line N` for you to sort out by hand.
+
+### Backup route: MARC / Data Import (`--use-marc`)
+Use this when the Orders API load cannot be used. It replaces steps 6-9 above; run
+`ebsconet.py setup --ini TENANT.ini --live` once per tenant first, and add `--use-marc` to
+`load` and `finish`. Steps M6-M9 below are the MARC versions of steps 6-9.
+
+#### M6. Dry-run the load (preflight)
+- [ ] `.venv/bin/python ebsconet.py load --use-marc --ini TENANT.ini`
 - [ ] The preflight check reads the files and the tenant and reports **ERROR**s (the load
       would fail or discard lines) and warnings. Typical errors are a fund, expense class
       or organization code the customer mistyped or that does not exist in FOLIO, an
@@ -144,10 +183,10 @@ Steps 6-8 describe the backup MARC route (add `--use-marc` to `load` and `finish
       and repeat steps 5-6 until there are **no errors**. The load refuses to run while
       there are errors.
 
-### 7. Load
+#### M7. Load
 Do a small trial first if this is a new tenant (copy a few records into a test .mrc and
-load it with `python -m pipeline.folio_import`; see the README).
-- [ ] `.venv/bin/python ebsconet.py load --ini TENANT.ini --live`. Long loads can exceed a
+load it with `python -m pipeline.folio_import`; see README_DATA_IMPORT.md).
+- [ ] `.venv/bin/python ebsconet.py load --use-marc --ini TENANT.ini --live`. Long loads can exceed a
       terminal's time limit; run it in the background or a second terminal and read the
       result afterwards.
 - [ ] Per file the summary shows "POs with a PO line: N of N" and "empty product IDs
@@ -159,7 +198,7 @@ load it with `python -m pipeline.folio_import`; see the README).
 - [ ] Data Import -> Logs shows the same jobs (parent + child).
 - [ ] Something failed? Section D.
 
-### 8-9. Ongoing conversion and the EBSCONET hand-off
+#### M8-M9. Ongoing conversion and the EBSCONET hand-off
 
 **What this step does, and why.** (The customer now chooses, per order, whether it is Ongoing or One-Time and its renewal interval; `build` records the choices in `out/order_settings.csv` and `finish` follows them: One-Time orders are left alone, Ongoing orders get the customer's interval.) Each order has two separate settings: its **status**
 (Pending / Open / Closed) and its **order type** (One-Time / Ongoing). Data Import creates
@@ -184,7 +223,7 @@ It is optional and safe to leave for later: nothing is converted unless you run 
 `out/ongoing_log.csv`), and the orders simply stay One-Time. The decision to keep this step
 as is was made on 2026-09-30; revisit it if the renewal dates should work differently.
 
-- [ ] `.venv/bin/python ebsconet.py finish --ini TENANT.ini` (dry run: shows the renewal
+- [ ] `.venv/bin/python ebsconet.py finish --use-marc --ini TENANT.ini` (dry run: shows the renewal
       dates in `out/ongoing_log.csv` and writes the PO / POL export).
 - [ ] Same with `--live` to convert the POs to ongoing orders. Orders stay **Pending**.
       In FOLIO each converted order shows type Ongoing and status Pending.
@@ -201,12 +240,13 @@ as is was made on 2026-09-30; revisit it if the renewal dates should work differ
 ## D. When something goes wrong (run these by hand)
 | Problem | Tool |
 |---|---|
-| Some records did not load (discarded, or an empty PO left behind) | `.venv/bin/python folio_retry_failed.py out/marc/<file>.mrc --ini TENANT.ini` lists them and writes `out/retry/<file>_retry.mrc` plus `_delete_empty.csv` |
+| Some POs came back `error`, `invalid` or `lookup-failed` | Fix the cause (the message names it), then run `ebsconet.py load --ini TENANT.ini --live` again; POs that exist are skipped |
+| MARC route: some records did not load (discarded, or an empty PO left behind) | `.venv/bin/python folio_retry_failed.py out/marc/<file>.mrc --ini TENANT.ini` lists them and writes `out/retry/<file>_retry.mrc` plus `_delete_empty.csv` |
 | Empty POs or wrongly loaded orders to remove | List them in `orders_to_delete.csv` (`PO,<number>` or `POL,<number>`), then `folio_delete_orders.py orders_to_delete.csv --ini TENANT.ini` (dry run) and again with `--live`. Pending orders only; backups in `out/deleted_backup/` |
-| Several lines for one PO number (Data Import discards the later records) | After the first line has loaded: `folio_add_po_lines.py out/marc/<file>.mrc --ini TENANT.ini` (dry run), then `--live` |
-| Load the retry file | `.venv/bin/python -m pipeline.folio_import out/retry/<file>_retry.mrc --ini TENANT.ini --job-profile "EBSCONET order migration - Online"` (add `--live`) |
-| Empty product IDs on orders loaded another way | `.venv/bin/python -m pipeline.folio_clean_product_ids --csv po_numbers.csv --ini TENANT.ini --live` |
-| Test tenant: remove the test POs you loaded | `folio_cleanup_test_pos.py --ini TENANT.ini` (dry run) then `--live`. Test tenants only |
+| MARC route: several lines for one PO number (Data Import discards the later records) | After the first line has loaded: `folio_add_po_lines.py out/marc/<file>.mrc --ini TENANT.ini` (dry run), then `--live` |
+| MARC route: load the retry file | `.venv/bin/python -m pipeline.folio_import out/retry/<file>_retry.mrc --ini TENANT.ini --job-profile "EBSCONET order migration - Online"` (add `--live`) |
+| MARC route: empty product IDs on orders loaded another way | `.venv/bin/python -m pipeline.folio_clean_product_ids --csv po_numbers.csv --ini TENANT.ini --live` |
+| Test tenant: remove the test POs you loaded | List them in a CSV and use `folio_delete_orders.py` as above. MARC route: `folio_cleanup_test_pos.py --ini TENANT.ini` (dry run) then `--live` deletes the POs in your local `.mrc` files. Test tenants only |
 | The Orders API load fails or is unavailable | Use the backup MARC / Data Import route: `ebsconet.py load --use-marc --ini TENANT.ini` (dry run = preflight), `--live`, then `ebsconet.py finish --use-marc --ini TENANT.ini --live`. Needs `setup` profiles. Several lines on one PO are not possible on this route |
 | One step on its own (any `pipeline/` step) | `.venv/bin/python -m pipeline.<step> --help` |
 
@@ -219,14 +259,16 @@ files together (or use a separate `--out` folder per SOP, e.g. `--out out/2026-s
 |---|---|---|
 | `customer/<name>_for_customer_electronic / _physical / _P-E.xlsx` | for-customer | Send to the customer (one per type that has lines) |
 | `customer/<name>_zero_dollar_removed.csv`, `..._not_sent.csv`, `..._report.txt` | for-customer | What was removed, what was not sent (Fee / unrecognized format) and why |
-| `order_settings.csv` | build | Each order: Ongoing or One-Time, and its renewal interval; read by `finish` |
+| `order_settings.csv` | build | Each order: Ongoing or One-Time, and its renewal interval; read by `finish --use-marc` |
 | `library-EBSCONET_online / -print / _P-E.xlsx` | build | The filled-in lines split by format |
 | `prep_report.txt`, `prep_exclusions.csv`, `prep_no_issn.csv`, `prep_defaults_used.csv` | build | What was excluded, loaded without an ISSN, or given a default |
-| `marc/*.mrc`, `marc/*.mrk` | build | Files for Data Import, and readable text copies |
-| `import_logs/*.csv` | load | Audit log of each import |
-| `ongoing_log.csv`, `pol_export.csv` | finish | Conversion results; the PO / POL list for EBSCONET |
+| `logs/accounts_<timestamp>.txt` | load | Vendor accounts added (or that would be): mode, start / end / elapsed time, account numbers |
+| `pol_export.csv` | finish | The PO / POL list for EBSCONET |
+| `marc/*.mrc`, `marc/*.mrk` | build | MARC route: files for Data Import, and readable text copies |
+| `import_logs/*.csv` | load --use-marc | MARC route: audit log of each import |
+| `ongoing_log.csv` | finish --use-marc | MARC route: conversion results |
 
-## Lessons from the bugfest trials
+## Lessons from the bugfest trials (MARC route)
 - A fund without an Active budget containing the expense class: the PO is created but its
   line is discarded ("Budget expense class not found"). Preflight checks this.
 - FOLIO rejects `HTTP://WWW...` resource URLs (lowercase scheme and host required); the

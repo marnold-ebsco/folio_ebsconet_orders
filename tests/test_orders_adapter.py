@@ -85,3 +85,21 @@ def test_ensure_accounts_adds_missing_only_when_live():
     path, payload = live.puts[0]
     assert path.endswith("/o1")
     assert [a["accountNo"] for a in payload["accounts"]] == ["1", "2"]
+
+
+def test_accounts_log_is_timestamped_and_lists_accounts(tmp_path):
+    from datetime import datetime, timedelta
+    from pipeline.folio_orders_adapter import format_elapsed, write_accounts_log
+    start = datetime(2026, 10, 1, 14, 5, 9)
+    report = [("EBSCO", ["A1", "A2"], ["A0"]), ("GONE", None, [])]
+    path = write_accounts_log(tmp_path / "logs", start, start + timedelta(seconds=75),
+                              True, "/x/tenant.ini", "out", report)
+    assert path.name == "accounts_20261001_140509.txt"
+    text = path.read_text(encoding="utf-8")
+    assert "Started:   2026-10-01 14:05:09" in text and "Elapsed:   0:01:15" in text
+    assert "added: A1" in text and "already present: A0" in text
+    assert "GONE: ORGANIZATION NOT FOUND" in text and "tenant.ini" in text
+    assert "/x/" not in text and "accounts added: 2" in text
+    dry = write_accounts_log(tmp_path, start, start, False, "t.ini", "out", report)
+    assert "DRY RUN" in dry.read_text(encoding="utf-8")
+    assert format_elapsed(3725) == "1:02:05"

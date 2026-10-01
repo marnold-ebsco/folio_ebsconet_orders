@@ -3,7 +3,7 @@
 Input is a CSV of PO numbers (Orders app CSV export, or one PO number per line).
 Nothing is written to FOLIO unless --live is given; the default is a dry run.
 Settings (interval, subscription flag, renewal date rule) live in the "ongoing"
-section of ebsconet_config.json -- see README.md.
+section of ebsconet_config.json -- see README_DATA_IMPORT.md.
 """
 import argparse
 import csv
