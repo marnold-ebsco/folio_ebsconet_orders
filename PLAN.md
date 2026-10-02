@@ -18,7 +18,7 @@ except pymarc / openpyxl / httpx.
 
 ## Workflow (rehearsed end to end on bugfest, 2026-09-30)
 1. EBSCONET sends the SOP. 2. `ebsconet.py for-customer` removes every zero-dollar line and
-adds the columns the customer fills in (FOLIO Org / Fund / Expense Class, highlighted), in one workbook with a Defaults sheet first.
+adds the columns the customer fills in (FOLIO Access Provider / Fund / Expense Class, highlighted), in one workbook with a Defaults sheet first.
 3. The customer fills them in line by line and returns the file. 4. `ebsconet.py build`
 processes it (remaining rules, the customer's values, split by format, MARC files).
 5. `ebsconet.py load` (dry run) reports errors such as mistyped codes; the
@@ -64,7 +64,7 @@ The first row is the default route; rows 2-6 and the MARC-only tools belong to t
   (`out/prep_no_issn.csv`). A row with neither an ISSN nor a title number gets a generated
   product ID `NOISSN-<order number>` (type Local identifier). See "Data rules" in README_API.md / README_DATA_IMPORT.md.
 - **Fund, expense class and org come from the customer's SOP columns** (FOLIO Fund /
-  FOLIO Expense Class / FOLIO Org, filled line by line); the config values are only the
+  FOLIO Expense Class / FOLIO Access Provider, filled line by line); the config values are only the
   fallback for blank cells. Fallbacks are logged (`out/prep_defaults_used.csv`).
 - **Orders stay Pending.** The mapping profiles set `workflowStatus` to `"Pending"`;
   no script opens an order, and the preflight check refuses to load with a job profile

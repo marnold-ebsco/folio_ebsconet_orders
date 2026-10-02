@@ -149,23 +149,15 @@ Audit item 2 "7 Term" is therefore settled (used for type + interval, no separat
   Code (17). Quantity, Currency, PO Number and Fund Code are kept in the workbook but their
   FOLIO mapping is NOT built yet (see audit items 2-3 below). 215 tests, flake8 clean.
 
-## NEXT (proposed 2026-10-02, awaiting user go-ahead): vendor vs access provider
-`EBSCOnetInstructions.txt` (repo root) says the PO **vendor is always EBSCO/EBSCONET**; the
-`FOLIO Org` column holds the matching org per *publisher* and feeds `990$v` = the **access
-provider** (electronic / P-E only), "ultimately optional". Vendor account numbers (`990$n`)
-belong to the EBSCONET org (step 8). The API adapter does NOT match this:
-`row_to_line` (`pipeline/folio_orders_adapter.py:42`) puts `FOLIO Org` into `vendor_code`, so a
-publisher the customer fills in becomes the PO vendor and `ensure_accounts` adds the account to
-that publisher. Proposed fix:
-- `vendor_code` = always the EBSCONET org (`default_org` / a vendor setting on Defaults).
-- `FOLIO Org` -> `access_provider_code` (loader supports it; electronic and P-E lines only;
-  blank falls back to the vendor in the loader builder).
-- `ensure_accounts` adds accounts to the EBSCONET org only.
-- Rename the column (e.g. `FOLIO Access Provider (Org)`) so customers do not read it as the
-  vendor; update `added_columns`, `customer_columns`, `customer_settings` wording
-  ("Default vendor organization"), `org_by_publisher` handling in `ebsconet_prep.py:353`
-  (check it too), `bin/ebsconet_configure.py`, README_API/DATA_IMPORT, tests.
-- Check the MARC route (`990$v`) for the same confusion.
+## DONE 2026-10-02: vendor vs access provider
+The PO vendor is always the EBSCONET org (`folio.vendor_org_code`; the Defaults sheet question is
+now "Vendor organization"). The customer column `FOLIO Org` is renamed **`FOLIO Access Provider`**
+(config key `added_columns.org` unchanged) and goes to the loader's `access_provider_code` on
+electronic and P-E lines only; blank = `default_org` (Defaults question "Default access
+provider"; `org_by_publisher` still maps publisher -> access provider). `ensure_accounts` adds
+accounts to the vendor org only. The MARC route was already right (`990$v` = access provider).
+Old customer files with a `FOLIO Org` header are not read (blank -> default). Not tried on a
+tenant. 217 tests, flake8 clean.
 
 ## Audit DONE 2026-10-02: decisions needed (no code changed)
 Full table: `work/composite_orders_column_audit.md` (git-ignored). Pick from these, then implement:

@@ -47,7 +47,7 @@ def test_stage1_removes_zero_dollar_lines_and_adds_highlighted_columns(cfg, tmp_
     make_sop(src, ROWS)
     s = cli.prepare_for_customer(src, tmp_path / "out", cfg)
     assert (s["read"], s["removed"], s["kept"]) == (6, 3, 3)
-    assert s["columns"] == {"online": ["FOLIO Org", "FOLIO Fund", "FOLIO Expense Class",
+    assert s["columns"] == {"online": ["FOLIO Access Provider", "FOLIO Fund", "FOLIO Expense Class",
                                        "FOLIO Order Type",
                                        "FOLIO Renewal Interval (Days)"]}
     assert s["file"] == tmp_path / "out" / "customer" / "SOP_for_customer.xlsx"
@@ -59,7 +59,7 @@ def test_stage1_removes_zero_dollar_lines_and_adds_highlighted_columns(cfg, tmp_
     assert names == HEADERS + s["columns"]["online"]
     assert [ws.cell(row=r, column=1).value for r in range(2, ws.max_row + 1)] == [
         "Paid", "Paid 2", "Odd cost"]                      # unparseable cost is kept
-    org = names.index("FOLIO Org") + 1
+    org = names.index("FOLIO Access Provider") + 1
     for r in range(1, ws.max_row + 1):                     # whole column highlighted
         assert ws.cell(row=r, column=org).fill.start_color.rgb.endswith("FFFFCC")
         assert ws.cell(row=r, column=1).fill.fill_type is None
@@ -92,18 +92,18 @@ def test_stage1_leaves_out_expense_class_when_not_used(cfg, tmp_path):
     src = tmp_path / "SOP.xlsx"
     make_sop(src, ROWS[:1])
     s = cli.prepare_for_customer(src, tmp_path / "out", cfg)
-    assert s["columns"]["online"][:3] == ["FOLIO Org", "FOLIO Fund", "FOLIO Order Type"]
+    assert s["columns"]["online"][:3] == ["FOLIO Access Provider", "FOLIO Fund", "FOLIO Order Type"]
 
 
 def test_build_uses_the_filled_in_columns(cfg, tmp_path, capsys):
     """Stage 2 on a spreadsheet the customer has filled in."""
     headers = ["Title Name", "ISSN", "Format", "Start Date", "Expiration Date",
                "Order Number", "Total Cost", "Publisher Package", "Publisher Name",
-               "Subject Category", "FOLIO Org", "FOLIO Fund", "FOLIO Expense Class"]
+               "Subject Category", "FOLIO Access Provider", "FOLIO Fund", "FOLIO Expense Class"]
     row = {"Title Name": "Journal", "ISSN": "1234-5678", "Format": "Online Only",
            "Start Date": "01/01/2026", "Expiration Date": "12/31/2026",
            "Order Number": "U1", "Total Cost": 50, "Publisher Name": "Pub",
-           "Subject Category": "Art", "FOLIO Org": "MYORG", "FOLIO Fund": "MYFUND",
+           "Subject Category": "Art", "FOLIO Access Provider": "MYORG", "FOLIO Fund": "MYFUND",
            "FOLIO Expense Class": "MYEC"}
     src = tmp_path / "filled.xlsx"
     make_sop(src, [row], headers)
@@ -276,7 +276,7 @@ def test_stage1_writes_one_spreadsheet_per_type_with_its_own_columns(cfg, tmp_pa
     assert wb.sheetnames[:4] == ["Defaults", "electronic", "physical", "P-E"]
     added = {r: wb[name][1] for r, name in s["sheets"].items()}
     added = {r: [c.value for c in row][len(HEADERS):] for r, row in added.items()}
-    assert added["online"] == ["FOLIO Org", "FOLIO Fund", "FOLIO Expense Class",
+    assert added["online"] == ["FOLIO Access Provider", "FOLIO Fund", "FOLIO Expense Class",
                                "FOLIO Order Type", "FOLIO Renewal Interval (Days)"]
     assert added["pe"] == added["online"] + ["FOLIO Location", "FOLIO Material Type"]
     assert added["print"] == added["pe"]        # physical asks the same questions
@@ -366,7 +366,7 @@ def test_answers_on_the_defaults_sheet_become_config_overrides(cfg, tmp_path):
     path, wb = _filled_workbook(cfg, tmp_path)
     ws = wb["Defaults"]
     answers = {"Fund: electronic": "ELEC2 - Electronic two", "Use expense classes?": "No",
-               "Default vendor organization": "ACME - Acme", "Default location": "Main (MAIN)",
+               "Default access provider": "ACME - Acme", "Default location": "Main (MAIN)",
                "Default order type": "one time", "Default renewal interval (days)": 180,
                "Subject to expense class (optional)": "Physical Sciences = SER; Art = ART"}
     for row in ws.iter_rows(min_row=2):

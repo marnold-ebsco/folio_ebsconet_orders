@@ -162,12 +162,12 @@ def gather(client, cfg, read=input):
     orgs = [o for o in fetch(client, "/organizations/organizations", "organizations")
             if o.get("isVendor", True)]
     orgs.sort(key=lambda o: o.get("code", ""))
-    print("Default vendor organization when the customer leaves 'FOLIO Org' blank "
+    print("Default access provider when the customer leaves 'FOLIO Access Provider' blank "
           "(current: %s)" % current.get("default_org"))
     org = pick_one(orgs, code_name, "Organization", allow_blank=True, read=read)
     if org:
         out["default_org"] = org["code"]
-    print("Organization that vendor accounts are added to by folio_setup "
+    print("EBSCONET vendor organization (vendor on every order; accounts are added to it) "
           "(current: %s)" % current.get("folio", {}).get("vendor_org_code"))
     vendor = pick_one(orgs, code_name, "Organization", allow_blank=True, read=read)
     if vendor:

@@ -25,7 +25,7 @@ records the design.
   edit orders and organizations.
 - On the tenant: the EBSCONET **vendor organization** (its code is `folio.vendor_org_code`
   in `ebsconet_config.json`, default `ebsconet`); the organizations the customer will name in
-  **FOLIO Org** (marked as vendors); the **funds** named in **FOLIO Fund**, each Active with an
+  **FOLIO Access Provider** (marked as vendors); the **funds** named in **FOLIO Fund**, each Active with an
   Active budget for the order's fiscal year that lists the **expense classes** in use (the
   budget amount does not matter for loading; a zero-based budget is fine); the **location**
   and **material type** for print / P-E lines; and the acquisition method named in the config.
@@ -146,7 +146,7 @@ are still accepted by `build`.)
 
 | Sheet | Columns |
 |---|---|
-| electronic (`online`) | `FOLIO Org`, `FOLIO Fund`, `FOLIO Expense Class`, `FOLIO Order Type`, `FOLIO Renewal Interval (Days)` |
+| electronic (`online`) | `FOLIO Access Provider`, `FOLIO Fund`, `FOLIO Expense Class`, `FOLIO Order Type`, `FOLIO Renewal Interval (Days)` |
 | physical (`print`) | the five above plus `FOLIO Location`, `FOLIO Material Type` |
 | P-E (`pe`) | the same seven columns as physical |
 

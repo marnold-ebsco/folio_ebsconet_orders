@@ -67,7 +67,7 @@ please enter:
 |---|---|---|---|
 | **FOLIO Fund** | all | The **code** of the fund that pays for this subscription | Finance app, list of funds |
 | **FOLIO Expense Class** | all | The **code** of the expense class, *only if your library uses them* | Settings, Finance, expense classes |
-| **FOLIO Org** | all | The **code** of the organization to show as the access provider (optional) | Organizations app |
+| **FOLIO Access Provider** | all | The **code** of the organization to show as the access provider (optional) | Organizations app |
 | **FOLIO Order Type** | all three | Click the cell and **choose Ongoing or One-Time from the list** that pops up (we pre-fill it: Ongoing when the SOP shows a Term, One-Time when it does not; change it if we got it wrong). Nothing else is accepted. | (the list) |
 | **FOLIO Renewal Interval (Days)** | all three | **Only if the order is Ongoing:** how often it renews, in days (for example 365 for a yearly subscription). Whole numbers only. Leave blank for One-Time. | Your subscription terms |
 | **FOLIO Location** | physical, P/E | Where the print copy goes | Settings, Tenant, Locations (you may get a list to choose from) |
@@ -170,7 +170,7 @@ expect. If something is wrong, we can remove and reload the affected orders.
 - [ ] Answer the questions on the Defaults sheet
 - [ ] Fill in FOLIO Fund on every line
 - [ ] Fill in FOLIO Expense Class, if used
-- [ ] Fill in FOLIO Org, if wanted
+- [ ] Fill in FOLIO Access Provider, if wanted
 - [ ] Every sheet: choose Ongoing or One-Time from the list on every line; for Ongoing, enter the renewal interval in days
 - [ ] Physical and P/E: fill in FOLIO Location and FOLIO Material Type
 - [ ] Return **all** the spreadsheets, then correct anything on the list we send back

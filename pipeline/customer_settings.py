@@ -89,10 +89,12 @@ def settings_rows(cfg):
          "answer above is No).", "ExpenseClasses", cfg.get("default_expense_class")),
         ("Subject to expense class (optional)", "Optional: one line per SOP subject, written "
          "Subject = class code, e.g. Physical Sciences = SER.", None, None),
-        ("Default vendor organization", "Organization used for a subscription when no "
-         "organization is given.", "Organizations", cfg.get("default_org")),
-        ("Organization for vendor accounts", "Organization the SOP account numbers are "
-         "added to.", "Organizations", folio.get("vendor_org_code")),
+        ("Default access provider", "Organization shown as the access provider when the "
+         "FOLIO Access Provider cell is blank (electronic and print + electronic).",
+         "Organizations", cfg.get("default_org")),
+        ("Vendor organization", "The EBSCONET organization: the vendor on every order, and "
+         "where the SOP account numbers are added.", "Organizations",
+         folio.get("vendor_org_code")),
         ("Default location", "Used when the customer leaves the location blank on the "
          "physical and print + electronic sheets.", "Locations", folio.get("location")),
         ("Default material type", "Used when the customer leaves it blank on the physical "
@@ -191,10 +193,10 @@ def read_overrides(path):
     if "Subject to expense class (optional)" in answers:
         put(("expense_class_by_subject",),
             _subjects(answers["Subject to expense class (optional)"]))
-    if "Default vendor organization" in answers:
-        put(("default_org",), _code(answers["Default vendor organization"]))
-    if "Organization for vendor accounts" in answers:
-        put(("folio", "vendor_org_code"), _code(answers["Organization for vendor accounts"]))
+    if "Default access provider" in answers:
+        put(("default_org",), _code(answers["Default access provider"]))
+    if "Vendor organization" in answers:
+        put(("folio", "vendor_org_code"), _code(answers["Vendor organization"]))
     for key, name in (("Default location", "location"),
                       ("Default material type", "physical_material_type"),
                       ("Acquisition method", "acquisition_method"),

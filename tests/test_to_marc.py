@@ -13,7 +13,7 @@ from pipeline.ebsconet_prep import load_config  # noqa: E402
 
 COLS = ["Title Name", "ISSN", "Start Date", "Expiration Date", "Order Number",
         "Total Cost", "Publisher Name", "URL", "Account Number", "Format",
-        "FOLIO Fund", "FOLIO Expense Class", "FOLIO Org", "Title Number"]
+        "FOLIO Fund", "FOLIO Expense Class", "FOLIO Access Provider", "Title Number"]
 TAGS = ["245$a", "020$a", "990$s", "990$t", "990$o", "990$c", "264$a", "856$u",
         "990$a", "Ignore"]
 
@@ -39,7 +39,7 @@ def row(**kw):
             "Start Date": "2026-01-01", "Expiration Date": "2026-12-31",
             "Order Number": "U1", "Total Cost": 1234.5, "Publisher Name": "Pub $ Co",
             "URL": "http://x.org", "Account Number": "BR1", "Format": "Online Only",
-            "FOLIO Fund": "F1", "FOLIO Expense Class": "E1", "FOLIO Org": "O1",
+            "FOLIO Fund": "F1", "FOLIO Expense Class": "E1", "FOLIO Access Provider": "O1",
             "Title Number": "P1"}
     base.update(kw)
     return base

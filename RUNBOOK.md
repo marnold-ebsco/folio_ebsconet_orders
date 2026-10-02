@@ -14,7 +14,7 @@ unless a command says `--live`.
  1. sends the SOP  ------->  2. ebsconet.py for-customer SOP
                                 (removes every $0 line, splits by
                                  format, adds the columns to fill in)
-                             send  the 1 *_for_customer.xlsx   ->  3. fills in FOLIO Org,
+                             send  the 1 *_for_customer.xlsx   ->  3. fills in FOLIO Access Provider,
                                                                    Fund, Expense Class on
                                                                    every line; Order Type
                                                                    + Renewal Interval
@@ -63,7 +63,7 @@ the ones you run separately, when something needs fixing.
       logs in and shows what it would create).
 - [ ] The EBSCONET **vendor organization** exists (its code is `folio.vendor_org_code` in
       `ebsconet_config.json`).
-- [ ] The organizations the customer will name in **FOLIO Org** exist and are marked as
+- [ ] The organizations the customer will name in **FOLIO Access Provider** exist and are marked as
       vendors.
 - [ ] The **funds** the customer will name in **FOLIO Fund** exist and are Active, each
       with an **Active budget** for the order's fiscal year that lists the **expense
@@ -102,7 +102,7 @@ the ones you run separately, when something needs fixing.
 
 What the customer fills in on each sheet (highlighted light yellow):
 
-| Sheet | FOLIO Org / Fund / Expense Class | FOLIO Order Type + FOLIO Renewal Interval (Days) | FOLIO Location + FOLIO Material Type |
+| Sheet | FOLIO Access Provider / Fund / Expense Class | FOLIO Order Type + FOLIO Renewal Interval (Days) | FOLIO Location + FOLIO Material Type |
 |---|---|---|---|
 | electronic (online only, database, e-book) | yes | yes | |
 | physical (print) | yes | yes (interval rarely used) | yes |
@@ -116,7 +116,7 @@ names them: location as `Name (CODE)`, material type by name).
 (The SOP's own `Order Type` column is a different column and is not used.)
 
 > **Note to the customer:** please fill in the highlighted columns on **every** line of
-> each spreadsheet, and send all of them back. *FOLIO Org* = the code of the
+> each spreadsheet, and send all of them back. *FOLIO Access Provider* = the code of the
 > access-provider organization in FOLIO (optional per the process; blank uses our
 > default). *FOLIO Fund* = the code of the fund that pays for the line. *FOLIO Expense
 > Class* = the expense class code, if your library uses them. *FOLIO Order Type* =

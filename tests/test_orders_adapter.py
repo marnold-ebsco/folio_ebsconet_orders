@@ -7,7 +7,7 @@ ROW = {
     "Title Name": "Some Journal", "ISSN": "1938-3207", "Order Number": "S0110567",
     "Total Cost": 715.28, "Start Date": "2026-01-01",
     "Expiration Date": "2026-12-31", "Publisher Name": "Elsevier",
-    "Cancellable": "No", "FOLIO Org": "EBSCO", "FOLIO Fund": "TEST-ELEC",
+    "Cancellable": "No", "FOLIO Access Provider": "EBSCO", "FOLIO Fund": "TEST-ELEC",
     "FOLIO Expense Class": "GEN", "FOLIO Order Type": "Ongoing",
     "FOLIO Renewal Interval (Days)": 180,
     "Account Number": "XW14722-82",
@@ -123,3 +123,17 @@ def test_open_access_becomes_a_tag_and_your_access_a_receiving_note():
     line = row_to_line(dict(ROW, **{"Open Access": "No", "Your Access": None}),
                        "online", CFG)
     assert "line_tags" not in line and "receiving_note" not in line
+
+
+def test_vendor_is_always_the_ebsconet_org_and_the_cell_is_the_access_provider():
+    line = row_to_line(dict(ROW, **{"FOLIO Access Provider": "ELSEVIER"}), "online", CFG)
+    assert line["vendor_code"] == CFG["folio"]["vendor_org_code"]
+    assert line["access_provider_code"] == "ELSEVIER"
+
+
+def test_blank_access_provider_uses_the_default_and_print_has_none():
+    blank = dict(ROW, **{"FOLIO Access Provider": ""})
+    assert row_to_line(blank, "pe", CFG)["access_provider_code"] == CFG["default_org"]
+    line = row_to_line(dict(blank, **{"FOLIO Order Type": "One-Time"}), "print", CFG)
+    assert "access_provider_code" not in line
+    assert line["vendor_code"] == CFG["folio"]["vendor_org_code"]

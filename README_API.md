@@ -22,8 +22,9 @@ Nothing is opened or encumbered. `RUNBOOK.md` is the step-by-step checklist and
 - Python 3.12 or higher, and git access to the `folio_orders_loader` repository
   (it is installed from GitHub over ssh, see below).
 - A FOLIO tenant, and a user that can create and edit orders and organizations.
-- On the tenant: the organizations the customer will name in **FOLIO Org** (marked as
-  vendors); the **funds** named in **FOLIO Fund**, each Active with an Active budget for the
+- On the tenant: the EBSCONET **vendor organization** (its code is `folio.vendor_org_code`,
+  default `ebsconet`; it is the vendor on every order); the organizations the customer will
+  name in **FOLIO Access Provider** (optional, marked as vendors); the **funds** named in **FOLIO Fund**, each Active with an Active budget for the
   order's fiscal year that lists the **expense classes** in use (the budget amount does not
   matter; a zero-based budget is fine); and the **location** and **material type** used for
   print / P-E lines.
@@ -81,7 +82,8 @@ when the customer leaves a cell blank; the values in the repository are TEST pla
 |---|---|
 | `fund_by_route` | default fund code for `online` / `print` / `pe` |
 | `expense_class_by_subject`, `default_expense_class` | expense class by SOP subject, and the fallback |
-| `org_by_publisher`, `default_org` | vendor organization code by publisher, and the fallback |
+| `org_by_publisher`, `default_org` | access-provider organization code by publisher, and the fallback |
+| `folio.vendor_org_code` | the EBSCONET vendor organization (vendor on every order; receives the account numbers) |
 | `customer_choices` | optional drop-down lists for the customer's `location` and `material_type` columns (empty list = free text) |
 | `rules.exclude_zero_cost`, `rules.exclude_zero_cost_package_members` | drop $0 rows / $0 package members (both default `true`) |
 | `rules.exclude_usage_loading_service` | `true` leaves out "Usage Loading Service" lines (default `false`: they load) |
@@ -138,7 +140,7 @@ are still accepted by `build`.)
 
 | Sheet | Columns |
 |---|---|
-| electronic (`online`) | `FOLIO Org`, `FOLIO Fund`, `FOLIO Expense Class`, `FOLIO Order Type`, `FOLIO Renewal Interval (Days)` |
+| electronic (`online`) | `FOLIO Access Provider`, `FOLIO Fund`, `FOLIO Expense Class`, `FOLIO Order Type`, `FOLIO Renewal Interval (Days)` |
 | physical (`print`) | the five above plus `FOLIO Location`, `FOLIO Material Type` |
 | P-E (`pe`) | the same seven columns as physical |
 
@@ -195,7 +197,8 @@ every PO, in the dry run and with `--live`: a PO that fails it is `invalid` and 
 created for it. Long live loads can exceed a terminal's time limit: run them in the background
 or a second terminal and read the result afterwards.
 
-What a row becomes: Order Number -> PO number; FOLIO Org -> vendor; Title Name -> title;
+What a row becomes: Order Number -> PO number; `folio.vendor_org_code` -> vendor; FOLIO Access Provider -> access provider (electronic and
+P-E lines only; blank = `default_org`); Title Name -> title;
 ISSN and Title Number (with its type) -> product IDs; Publisher Name; Start / Expiration
 Date -> subscription from / to; Total Cost -> price; FOLIO Fund and Expense Class -> fund
 distribution; FOLIO Order Type / Renewal Interval -> order type and renewal interval;
@@ -208,8 +211,8 @@ renewal interval, `ongoing.is_subscription` and `ongoing.manual_renewal`.
 
 **Vendor accounts.** The SOP's **Account Number** becomes the line's vendor account. FOLIO
 stores the value whether or not the organization has such an account, so before creating the
-orders `load` adds each missing account number to the organization named on its lines (the
-line's FOLIO Org), with payment method `folio.account_payment_method` and status Active.
+orders `load` adds each missing account number to the EBSCONET vendor organization
+(`folio.vendor_org_code`), with payment method `folio.account_payment_method` and status Active.
 Organizations already holding the account are left alone; rows with no Account Number get no
 vendor account. A dry run prints "N to add" and changes nothing in FOLIO. An organization
 that cannot be found is reported and skipped (the loader then rejects its lines).
@@ -297,7 +300,7 @@ own folder with the global option, for example `ebsconet.py --out out/2026-sprin
 |---|---|
 | Dry run reports `lookup-failed` or `invalid` for a PO | Read the detail: a code the customer mistyped or that does not exist in FOLIO. Fix the cell (or the tenant), run `build` again, repeat the dry run |
 | A fund line fails on the expense class | The fund needs an Active budget for the fiscal year that lists the expense class |
-| `organization X not found; accounts not added` | The FOLIO Org code is wrong or the organization does not exist; fix it, or the loader rejects the lines |
+| `organization X not found; accounts not added` | `folio.vendor_org_code` is wrong or the organization does not exist; fix it, or the loader rejects the lines |
 | `load` exited 1 | At least one PO was invalid / lookup-failed / error / open-error. Every other PO was still processed. Fix the listed ones and run `load --live` again; existing POs are skipped |
 | `SOP is missing required column heading(s)` | SOP renamed a heading. Override it in `columns` in your `work/ebsconet_config.json`, e.g. `{"columns": {"cost": "New Heading"}}` (survives upgrades; keys are in `pipeline/pipeline_config.json`) |
 | PO numbers | FOLIO accepts 1-22 letters and digits only |

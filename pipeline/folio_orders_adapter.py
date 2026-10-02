@@ -39,7 +39,7 @@ def row_to_line(row, route, cfg):
     ongoing = cfg["ongoing"]
 
     order_type = _text(row, add["order_type"]) or ongoing["default_order_type"]
-    org = _text(row, add["org"]) or cfg.get("default_org")
+    access_provider = _text(row, add["org"]) or cfg.get("default_org")
     expense = ""
     if cfg.get("rules", {}).get("use_expense_classes", True):
         expense = _text(row, add["expense_class"]) or cfg.get("default_expense_class")
@@ -55,7 +55,7 @@ def row_to_line(row, route, cfg):
 
     line = {
         "po_number": _text(row, col["order_number"]),
-        "vendor_code": org,
+        "vendor_code": cfg["folio"]["vendor_org_code"],
         "title": _text(row, col["title"]),
         "order_format": ROUTE_FORMAT[route],
         "cost": _text(row, col["cost"]).replace(",", ""),
@@ -73,6 +73,8 @@ def row_to_line(row, route, cfg):
         "cancellation_restriction": _text(
             row, add["cancellation_restriction"]).lower() in ("yes", "true", "1"),
     }
+    if route != "print" and access_provider:
+        line["access_provider_code"] = access_provider
     if _text(row, col.get("open_access")).lower() in ("yes", "true", "1"):
         line["line_tags"] = [folio.get("open_access_tag", "Open Access")]
     if _text(row, col.get("your_access")):

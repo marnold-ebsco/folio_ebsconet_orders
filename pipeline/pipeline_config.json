@@ -25,7 +25,7 @@
   "added_columns": {
     "fund": "FOLIO Fund",
     "expense_class": "FOLIO Expense Class",
-    "org": "FOLIO Org",
+    "org": "FOLIO Access Provider",
     "package_flag": "Package?",
     "generated_id": "Generated ID?",
     "title_number": "Title Number",
@@ -65,7 +65,7 @@
   "extra_marc_map": {
     "FOLIO Fund": "990$f",
     "FOLIO Expense Class": "990$e",
-    "FOLIO Org": "990$v",
+    "FOLIO Access Provider": "990$v",
     "Title Number": "990$i",
     "Title Number Type": "990$j",
     "Cancellation Restriction": "980$k",
