@@ -442,3 +442,46 @@ def test_bad_order_type_and_interval_fall_back_with_warnings(cfg):
     assert len(prep.order_settings(row, cfg)[2]) == 2
     row = {"_row": 8, "FOLIO Order Type": "Ongoing", "FOLIO Renewal Interval (Days)": 45.0}
     assert prep.order_settings(row, cfg) == ("Ongoing", 45, [])
+
+
+def test_term_text_converts_to_days():
+    assert prep.term_days("1 Year(s)") == 365
+    assert prep.term_days("12 Month(s)") == 365
+    assert prep.term_days("15 Month(s)") == 456
+    assert [prep.term_days(v) for v in (None, "", "0 Year(s)", "soon")] == [None] * 4
+
+
+def test_term_decides_the_default_order_type(cfg):
+    cfg = {**cfg, "columns": {**cfg["columns"], "term": "Term"}}
+    base = {"_row": 2, "FOLIO Order Type": "", "FOLIO Renewal Interval (Days)": ""}
+    assert prep.order_settings({**base, "Term": "15 Month(s)"}, cfg) == ("Ongoing", 456, [])
+    assert prep.order_settings({**base, "Term": None}, cfg) == ("One-Time", "", [])
+    # the customer own answer still wins, and a blank interval takes the Term
+    assert prep.order_settings({**base, "Term": "1 Year(s)", "FOLIO Order Type": "one time"},
+                               cfg)[:2] == ("One-Time", "")
+    assert prep.order_settings({**base, "Term": None, "FOLIO Order Type": "Ongoing"},
+                               cfg)[:2] == ("Ongoing", 365)
+    # no Term column in the sheet: the configured default applies
+    assert prep.order_settings(base, cfg)[:2] == ("Ongoing", 365)
+
+
+def test_for_customer_prefills_type_and_interval_from_term(cfg, tmp_path):
+    hdr = ["Title Name", "ISSN", "Format", "Order Number", "Total Cost", "Term",
+           "FOLIO Order Type"]
+
+    def row(order, term, otype=None):
+        return {"Title Name": order, "ISSN": "1111-2222", "Format": "Online Only",
+                "Order Number": order, "Total Cost": 5, "Term": term,
+                "FOLIO Order Type": otype}
+    src = tmp_path / "SOP.xlsx"
+    make_sop(src, [row("A", "1 Year(s)"), row("B", "15 Month(s)"), row("C", None),
+                   row("D", "1 Year(s)", "One-Time"), row("E", None, "Ongoing")], hdr)
+    s = cli.prepare_for_customer(src, tmp_path / "out", {
+        **cfg, "columns": {**cfg["columns"], "term": "Term"}})
+    ws = load_workbook(s["file"])["electronic"]
+    names = [c.value for c in ws[1]]
+    got = {r[0].value: (r[names.index("FOLIO Order Type")].value,
+                        r[names.index("FOLIO Renewal Interval (Days)")].value)
+           for r in ws.iter_rows(min_row=2)}
+    assert got == {"A": ("Ongoing", 365), "B": ("Ongoing", 456), "C": ("One-Time", None),
+                   "D": ("One-Time", None), "E": ("Ongoing", 365)}

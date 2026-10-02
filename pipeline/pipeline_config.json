@@ -17,6 +17,7 @@
     "cancellable": "Cancellable",
     "descriptor": "Descriptor",
     "frequency": "Frequency",
+    "term": "Term",
     "title_number_source": "Publisher Product Code"
   },
   "added_columns": {

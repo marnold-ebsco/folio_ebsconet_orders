@@ -12,7 +12,7 @@ in git-ignored `work/`. Run via `bin/ebsconet-dev <subcommand>` (cds into `work/
 same way (`../.venv/bin/python ../folio_cleanup_test_pos.py --ini sunflower_bugfest.ini`). All
 `out/...`, `*.ini` paths below are relative to `work/`. The repo-root `ebsconet_config.json`
 is the tracked seed template. Docs (README*, RUNBOOK) still show repo-root commands for
-customers; not rewritten. 205 tests pass, flake8 clean.
+customers; not rewritten. 213 tests pass, flake8 clean.
 
 Code: `~/scratch/EBSCOnet` (Windows: `\\wsl.localhost\Ubuntu-24.04\home\marnold\scratch\EBSCOnet`),
 GitHub `marnold-ebsco/folio_ebsconet_orders`, SSH remote only. Run everything with
@@ -123,26 +123,17 @@ converter are unchanged. Not tried: a real Excel open of the workbook with tenan
 (`--ini`), `build` end to end on the new file (the `work/` dir lacks
 `order_marc_headers.xlsx`, a pre-existing gap), and the EC2. Docs updated.
 
-## NEXT (requested 2026-10-02; do NOT start until after the session clear): default Order Type from the SOP `Term` column
-User's rule, for testing AND production defaults: stop assigning One-Time / Ongoing
-arbitrarily. Use the SOP `Term` column (audit column 7) to decide: a row with a Term is
-**Ongoing**; a row with no Term is **One-Time**. The customer already answers Ongoing /
-One-Time per row in the `FOLIO Order Type` column (the user believes so; verify in
-`customer_fields` / `order_settings`), so `for-customer` should PRE-FILL that column from
-`Term` and the customer can still change it. Points to settle when starting:
-- Where to pre-fill: `prepare_for_customer()` (so the customer sees it) and/or the fallback in
-  `order_settings()` in `pipeline/ebsconet_prep.py` when the cell is blank (today the
-  fallback is `ongoing.default_order_type`, which the Defaults sheet's "Default order type"
-  also sets; decide how the Term rule and that default interact, likely Term wins when the cell
-  and default are both unset).
-- What counts as "has a Term": non-blank and not 0; check what values the real SOP holds
-  (`work/TestEBSCOnet.xlsx`).
-- Audit column 7 (Term -> `subscriptionInterval` days) is the same column: consider using the
-  Term as the renewal interval too instead of the flat 365 default (confirm the unit).
-- The 10 appended test books (rows 4737-4746) have no dates and probably no Term; they
-  should come out One-Time, which tests the no-dates path.
-- Tests for the rule; update docs (README_API/README_DATA_IMPORT Step 1 customer columns,
-  RUNBOOK, CLIENT_GUIDE order-type wording) and the `ongoing` defaults text.
+## DONE 2026-10-02: default Order Type and renewal interval from the SOP `Term`
+`columns.term` = "Term" in `pipeline_config.json`. `ebsconet_prep.term_days()` turns "1 Year(s)" /
+"12 Month(s)" (365), "15 Month(s)" (456), weeks, days into days; blank / 0 / unparseable = no Term.
+`order_settings()`: blank order type -> Ongoing if Term else One-Time (config
+`ongoing.default_order_type` applies only when the sheet has no Term column); blank interval on
+Ongoing -> Term days, else `interval_days`; One-Time carries no interval and the loader ignores
+one left in the cell. `prepare_for_customer()` pre-fills both columns (order type and interval
+independently; customer entries kept). Real SOP: 4692 "1 Year(s)", 25 "12 Month(s)", 18 "15
+Month(s)", 10 blank (the appended books -> One-Time, verified). Customer columns now sized to
+their headers. Docs updated (README_API/DATA_IMPORT, RUNBOOK, CLIENT_GUIDE). 213 tests, flake8 clean.
+Audit item 2 "7 Term" is therefore settled (used for type + interval, no separate mapping needed).
 
 ## NEXT: column drops (`drop_columns`), after the user picks from the audit below
 Implement in `prepare_for_customer` as a `drop_columns` list in `pipeline_config.json`.

@@ -101,7 +101,9 @@ def settings_rows(cfg):
         ("Vendor account payment method", "Payment method for vendor accounts added from "
          "the SOP's Account Number column.", "PaymentMethods",
          folio.get("account_payment_method")),
-        ("Default order type", "Order type when the customer leaves it blank.",
+        ("Default order type", "Order type when the customer leaves it blank and the SOP "
+         "has no Term column (otherwise a line with a Term is Ongoing, one without is "
+         "One-Time).",
          "OrderTypes", cfg.get("ongoing", {}).get("default_order_type")),
         ("Default renewal interval (days)", "Days between renewals of an ongoing order, "
          "when left blank (365 = yearly).", None, cfg.get("ongoing", {}).get("interval_days")),

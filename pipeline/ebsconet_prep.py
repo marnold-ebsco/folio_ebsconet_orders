@@ -200,23 +200,43 @@ def choice(value, choices):
     return None
 
 
+TERM_UNIT_DAYS = {"year": 365, "month": 365 / 12, "week": 7, "day": 1}
+
+
+def term_days(value):
+    """The SOP Term ("1 Year(s)", "15 Month(s)") in days, or None when it is blank, zero
+    or not of that form."""
+    match = re.match(r"\s*(\d+(?:\.\d+)?)\s*(year|month|week|day)", str(value or ""),
+                     re.I)
+    days = round(float(match.group(1)) * TERM_UNIT_DAYS[match.group(2).lower()]) \
+        if match else 0
+    return days or None
+
+
 def order_settings(row, cfg):
     """(order type, interval in days or "", warnings) from the customer's columns on a
-    spreadsheet line. A blank or unrecognised order type gets the configured
-    default; a blank or bad interval on an Ongoing order gets the default interval;
-    a One-Time order carries no interval."""
+    spreadsheet line. A blank or unrecognised order type comes from the SOP Term: a line
+    with a Term is Ongoing, renewing every Term, and a line with no Term is One-Time
+    (the configured defaults apply only when the sheet has no Term column). A blank or
+    bad interval on an Ongoing order gets the Term, else the default interval; a
+    One-Time order carries no interval."""
     a, ong = cfg["added_columns"], cfg["ongoing"]
     where = "row %s" % row["_row"]
     warnings = []
+    term_col = cfg["columns"].get("term")
+    term = term_days(row.get(term_col)) if term_col in row else None
+    fallback = (("Ongoing" if term else "One-Time") if term_col in row
+                else ong["default_order_type"])
     given = customer_value(row, a["order_type"])
     order_type = choice(given, cfg["order_type_choices"]) if given else None
     if given and order_type is None:
         warnings.append("%s: %s '%s' is not one of %s; used %s" % (
             where, a["order_type"], given, " / ".join(cfg["order_type_choices"]),
-            ong["default_order_type"]))
-    order_type = order_type or ong["default_order_type"]
+            fallback))
+    order_type = order_type or fallback
     if order_type == "One-Time":
         return order_type, "", warnings
+    default_days = term or ong["interval_days"]
     text = customer_value(row, a["renewal_interval"])
     try:
         days = int(float(text)) if text else 0
@@ -225,9 +245,8 @@ def order_settings(row, cfg):
     if days <= 0:
         if text:
             warnings.append("%s: %s '%s' is not a positive whole number of days; "
-                            "used %d" % (where, a["renewal_interval"], text,
-                                         ong["interval_days"]))
-        days = ong["interval_days"]
+                            "used %d" % (where, a["renewal_interval"], text, default_days))
+        days = default_days
     return order_type, days, warnings
 
 
@@ -368,6 +387,8 @@ def fill_sheet(ws, columns, rows, highlight, validations=None):
             ws.add_data_validation(validation)
     for idx, name in enumerate(columns, start=1):
         if name in highlight:
+            ws.column_dimensions[ws.cell(row=1, column=idx).column_letter].width = max(
+                len(name) + 3, 14)
             for r in range(1, ws.max_row + 1):
                 ws.cell(row=r, column=idx).fill = HIGHLIGHT
 
@@ -570,6 +591,15 @@ def prepare_for_customer(input_path, out_dir, cfg, lists=None):
             continue
         route = route_for(row.get(c["format"]), cfg)
         if route in kept:
+            a = cfg["added_columns"]
+            # Suggest order type and interval from the SOP Term; the customer's own
+            # entries are kept, and a One-Time line gets no interval.
+            suggested = order_settings(row, cfg)[:2]
+            if blank(row.get(a["order_type"])):
+                row[a["order_type"]] = suggested[0]
+            if blank(row.get(a["renewal_interval"])):
+                row[a["renewal_interval"]] = (
+                    suggested[1] if row[a["order_type"]] != "One-Time" else "")
             kept[route].append(row)
         else:
             unrouted.append((row["_row"], row.get(c["title"]), row.get(c["order_number"]),

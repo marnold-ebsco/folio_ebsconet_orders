@@ -65,7 +65,7 @@ customer leaves a cell blank; the values in the repository are TEST placeholders
 | `rules.exclude_usage_loading_service` | `true` leaves out "Usage Loading Service" lines (default `false`: they load) |
 | `rules.skip_missing_issn` | `false`: rows without an ISSN are loaded and logged, never skipped |
 | `rules.use_expense_classes` | `false` if the tenant does not use expense classes (no 990$e is written) |
-| `ongoing.default_order_type` | `Ongoing` or `One-Time`, used when the customer leaves the cell blank |
+| `ongoing.default_order_type` | `Ongoing` or `One-Time`, used when the customer leaves the cell blank and the SOP has no `Term` column (otherwise Term decides) |
 | `ongoing.interval_days` | default renewal interval (365) |
 | `ongoing.is_subscription`, `ongoing.manual_renewal` | `ongoing.isSubscription` / `ongoing.manualRenewal` (`true` / `false`) |
 | `ongoing.renewal_date_source` | where the renewal date comes from (see Finish) |
@@ -150,7 +150,7 @@ are still accepted by `build`.)
 | physical (`print`) | the five above plus `FOLIO Location`, `FOLIO Material Type` |
 | P-E (`pe`) | the same seven columns as physical |
 
-`FOLIO Order Type` is an Excel drop-down limited to `Ongoing` / `One-Time`;
+`FOLIO Order Type` is an Excel drop-down limited to `Ongoing` / `One-Time`. It arrives pre-filled from the SOP `Term` column (a line with a Term is Ongoing and its interval is the Term in days; a line with no Term is One-Time); change it as needed.
 `FOLIO Renewal Interval (Days)` accepts only whole numbers above 0 and is used only when the
 order type is Ongoing. `FOLIO Location` and `FOLIO Material Type` are drop-downs when
 `customer_choices` lists values, otherwise free text exactly as FOLIO names them (location as

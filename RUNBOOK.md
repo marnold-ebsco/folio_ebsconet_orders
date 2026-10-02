@@ -108,7 +108,7 @@ What the customer fills in on each sheet (highlighted light yellow):
 | physical (print) | yes | yes (interval rarely used) | yes |
 | P-E (print + online) | yes | yes | yes |
 
-*FOLIO Order Type* is a **drop-down** that accepts only `Ongoing` or `One-Time`;
+*FOLIO Order Type* is a **drop-down** that accepts only `Ongoing` or `One-Time`, pre-filled from the SOP *Term* (a Term = Ongoing, no Term = One-Time);
 *Renewal Interval* accepts only a whole number of days and is used only for Ongoing
 orders. *Location* and *Material Type* become drop-downs when `customer_choices` in
 `ebsconet_config.json` lists the tenant's values (otherwise free text, exactly as FOLIO

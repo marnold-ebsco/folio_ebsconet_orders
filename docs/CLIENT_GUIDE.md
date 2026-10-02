@@ -68,7 +68,7 @@ please enter:
 | **FOLIO Fund** | all | The **code** of the fund that pays for this subscription | Finance app, list of funds |
 | **FOLIO Expense Class** | all | The **code** of the expense class, *only if your library uses them* | Settings, Finance, expense classes |
 | **FOLIO Org** | all | The **code** of the organization to show as the access provider (optional) | Organizations app |
-| **FOLIO Order Type** | all three | Click the cell and **choose Ongoing or One-Time from the list** that pops up. Nothing else is accepted. | (the list) |
+| **FOLIO Order Type** | all three | Click the cell and **choose Ongoing or One-Time from the list** that pops up (we pre-fill it: Ongoing when the SOP shows a Term, One-Time when it does not; change it if we got it wrong). Nothing else is accepted. | (the list) |
 | **FOLIO Renewal Interval (Days)** | all three | **Only if the order is Ongoing:** how often it renews, in days (for example 365 for a yearly subscription). Whole numbers only. Leave blank for One-Time. | Your subscription terms |
 | **FOLIO Location** | physical, P/E | Where the print copy goes | Settings, Tenant, Locations (you may get a list to choose from) |
 | **FOLIO Material Type** | physical, P/E | The kind of item, for example "journal" | Settings, Inventory, Material types (you may get a list to choose from) |
