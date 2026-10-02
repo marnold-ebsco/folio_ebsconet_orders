@@ -5,6 +5,15 @@ Read this for the EBSCOnet / `folio_ebsconet_orders` work (three customer spread
 (`folio_orders_loader`) read `~/scratch/folio_orders/HANDOFF.md` instead. The two projects
 are related but tracked separately; this file does not repeat loader internals.
 
+**Dev work folder (2026-10-02):** like the installer layout, the checkout keeps tenant `.ini`
+files, a working `ebsconet_config.json` copy, `out/`, customer xlsx and `test_data_created.json`
+in git-ignored `work/`. Run via `bin/ebsconet-dev <subcommand>` (cds into `work/`, uses
+`.venv`), or by hand: `cd work && ../.venv/bin/python ../ebsconet.py ...`; other scripts the
+same way (`../.venv/bin/python ../folio_cleanup_test_pos.py --ini sunflower_bugfest.ini`). All
+`out/...`, `*.ini` paths below are relative to `work/`. The repo-root `ebsconet_config.json`
+is the tracked seed template. Docs (README*, RUNBOOK) still show repo-root commands for
+customers; not rewritten. 205 tests pass, flake8 clean.
+
 Code: `~/scratch/EBSCOnet` (Windows: `\\wsl.localhost\Ubuntu-24.04\home\marnold\scratch\EBSCOnet`),
 GitHub `marnold-ebsco/folio_ebsconet_orders`, SSH remote only. Run everything with
 `.venv/bin/python` from that folder (system `python3` lacks `httpx`), via

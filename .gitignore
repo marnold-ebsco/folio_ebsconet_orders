@@ -17,3 +17,6 @@ test_data_created.json
 !order_marc_headers.xlsx
 EBSCOnetInstructions.txt
 
+
+# dev working folder: tenant .ini, config copy, customer data, out/
+work/

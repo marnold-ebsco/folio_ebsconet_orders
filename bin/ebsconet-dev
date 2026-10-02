@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Dev equivalent of the installed `ebsconet`: runs the checkout from work/ (like the installer layout).
+# Usage: bin/ebsconet-dev for-customer SOP.xlsx    (anything after is passed to ebsconet.py)
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+mkdir -p "$root/work"
+cd "$root/work" && exec "$root/.venv/bin/python" "$root/ebsconet.py" "$@"
