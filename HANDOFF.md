@@ -109,6 +109,26 @@ tool; inline quoting and heredocs with backticks break.
   numbers in `out/three_type_test/`; check scope before running it. Bugfest has 1000+ POs from
   other vendors: never touch those.
 
+## Next task (not started): composite-orders vs. SOP column audit
+Requested 2026-10-02; do after a session clear. Compare the FOLIO `composite-orders`
+endpoint (mod-orders; schema `composite_purchase_order` / `compositePoLine`, see
+https://dev.folio.org/reference/api/ and the loader's payload in
+`~/scratch/folio_orders`) with the 53 SOP columns in `work/TestEBSCOnet.xlsx` and produce:
+1. For each SOP column, whether FOLIO has a reasonable place for it (field path), or none.
+2. For each of those, whether it is **already mapped** (by `pipeline/folio_orders_adapter.py`
+   `row_to_line` / `pipeline_config.json` `columns`) or **not mapped yet**.
+3. A list of columns that can reasonably be **removed at the `for-customer` step** (not needed
+   by the customer to fill in the FOLIO columns, nor by the load). Check what `build` and
+   `load` still read from the returned files before proposing removals.
+Deliver as a table (write it to a doc in the repo or `work/`, not to the chat only). Read-only
+analysis; no code changes until the user picks from the list.
+
+Test file notes (2026-10-02): `work/TestEBSCOnet.xlsx` is anonymized (order, invoice and PO
+numbers randomized; costs and account numbers were already scrambled). The `FOLIO Org/Fund/
+Expense Class` columns were removed from it (53 columns). 10 individual-book Print rows were
+appended (rows 4737-4746): no start/expiration date, no frequency, quantity 1, cost > 0, in
+three invoices (6403815 x4, 7150264 x3, 5927381 x3). Good for testing the no-dates path.
+
 ## Open
 1. **Done:** `api-load-default` merged to `main` 2026-10-01.
 2. **Real-tenant test (user will run it).** Bugfest allows overspend and is lenient, so
