@@ -31,6 +31,7 @@ Nothing is opened or encumbered. `RUNBOOK.md` is the step-by-step checklist and
 **Python environment**
 On a server where you do not want to clone the repo, use `install.sh` instead of the
 commands below: see "Installing on a server" in `README.md`.
+On such a server, run every `.venv/bin/python ebsconet.py ...` command below as `ebsconet ...` from `<install dir>/work`.
 
 ```
 python3 -m venv .venv
