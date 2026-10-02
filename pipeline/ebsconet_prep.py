@@ -17,6 +17,8 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import PatternFill
 from openpyxl.worksheet.datavalidation import DataValidation
 
+from pipeline import customer_settings
+
 HIGHLIGHT = PatternFill("solid", start_color="FFFFCC", end_color="FFFFCC")
 ROUTES = ("online", "print", "pe")
 
@@ -45,31 +47,52 @@ def load_config(path):
         return merge(fixed, json.load(fh))
 
 
-def read_sop(path):
-    """Return (headers, rows) where each row is a dict plus a '_row' sheet number."""
+def read_sop(path, all_sheets=False):
+    """Return (headers, rows) where each row is a dict plus a '_row' sheet number.
+
+    Reads the first sheet only (the SOP). With `all_sheets` it reads every data sheet, as in
+    the customer workbook, skipping the Defaults and option-list sheets; headers are the
+    union in first-seen order and, if more than one sheet has rows, `_row` is
+    "<sheet>:<row>"."""
     wb = load_workbook(path, read_only=True, data_only=True)
-    ws = wb.worksheets[0]
-    it = ws.iter_rows(values_only=True)
-    headers = [str(h).strip() if h is not None else "" for h in next(it)]
-    rows = []
-    for n, values in enumerate(it, start=2):
-        if all(v is None or v == "" for v in values):
+    skip = {customer_settings.SETTINGS_SHEET, *customer_settings.LIST_SHEETS}
+    sheets = ([ws for ws in wb.worksheets if ws.title not in skip] if all_sheets
+              else wb.worksheets[:1])
+    headers, rows, labelled = [], [], False
+    for ws in sheets:
+        it = ws.iter_rows(values_only=True)
+        first = next(it, None)
+        if first is None:
             continue
-        row = dict(zip(headers, values))
-        row["_row"] = n
-        rows.append(row)
+        names = [str(h).strip() if h is not None else "" for h in first]
+        headers += [h for h in names if h not in headers]
+        found = []
+        for n, values in enumerate(it, start=2):
+            if all(v is None or v == "" for v in values):
+                continue
+            row = dict(zip(names, values))
+            row["_row"] = n
+            found.append(row)
+        if found and rows:
+            labelled = True
+        rows += [dict(r, _sheet=ws.title) for r in found]
     wb.close()
+    for row in rows:
+        sheet = row.pop("_sheet")
+        if labelled:
+            row["_row"] = "%s:%s" % (sheet, row["_row"])
     return headers, rows
 
 
 def read_sops(paths):
-    """Read one or more spreadsheets (the electronic / physical / P-E files the customer
-    sends back) as one. Headers are the union in first-seen order. With a single file
-    `_row` is the sheet row number; with several it is "<file name>:<row>"."""
+    """Read one or more spreadsheets (the customer workbook, or the old electronic /
+    physical / P-E files) as one. Headers are the union in first-seen order. With a single
+    file and sheet `_row` is the sheet row number; otherwise it is "<sheet>:<row>" and,
+    with several files, "<file name>:<row>" or "<file name>:<sheet>:<row>"."""
     paths = [paths] if isinstance(paths, (str, Path)) else list(paths)
     headers, rows = [], []
     for path in paths:
-        h, r = read_sop(path)
+        h, r = read_sop(path, all_sheets=True)
         headers += [name for name in h if name not in headers]
         if len(paths) > 1:
             for row in r:
@@ -332,12 +355,9 @@ def enrich(row, route, cfg):
     return out, warnings
 
 
-def write_workbook(path, columns, rows, highlight, validations=None):
+def fill_sheet(ws, columns, rows, highlight, validations=None):
     """validations: {column name: DataValidation}, applied down that column (and well
     below the last row, so the customer can add lines)."""
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Sheet1"
     ws.append(columns)
     for row in rows:
         ws.append([row.get(col) for col in columns])
@@ -350,6 +370,13 @@ def write_workbook(path, columns, rows, highlight, validations=None):
         if name in highlight:
             for r in range(1, ws.max_row + 1):
                 ws.cell(row=r, column=idx).fill = HIGHLIGHT
+
+
+def write_workbook(path, columns, rows, highlight, validations=None):
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+    fill_sheet(ws, columns, rows, highlight, validations)
     wb.save(path)
 
 
@@ -477,8 +504,10 @@ def prepare(input_path, out_dir, cfg, headers_file=None):
             "duplicate_orders": dupes, "warnings": warnings}
 
 
-def customer_validations(route, cfg):
-    """Drop-down / number checks for the customer columns of a spreadsheet."""
+def customer_validations(route, cfg, lists=None):
+    """Drop-down / number checks for the customer columns of a sheet. `lists` (from
+    customer_settings.tenant_lists) supplies tenant-wide drop-downs for location and
+    material type when the config does not restrict them."""
     a = cfg["added_columns"]
     fields = customer_fields(route, cfg)
     checks = {}
@@ -499,11 +528,13 @@ def customer_validations(route, cfg):
         dv.prompt, dv.promptTitle = ("Days between renewals. Needed only when the "
                                      "order type is Ongoing.", "Renewal interval")
         checks[a["renewal_interval"]] = dv
-    for key in ("location", "material_type"):
+    for key, sheet in (("location", "Locations"), ("material_type", "MaterialTypes")):
         options = cfg.get("customer_choices", {}).get(key) or []
-        if a[key] in fields and options:
+        formula = ('"%s"' % ",".join(options) if options
+                   else customer_settings.list_range(sheet, lists or {}))
+        if a[key] in fields and formula:
             dv = DataValidation(type="list", allow_blank=True, showDropDown=False,
-                                formula1='"%s"' % ",".join(options))
+                                formula1=formula)
             dv.error, dv.errorTitle = "Choose a value from the list.", a[key]
             checks[a[key]] = dv
     for dv in checks.values():
@@ -511,19 +542,22 @@ def customer_validations(route, cfg):
     return checks
 
 
-def prepare_for_customer(input_path, out_dir, cfg):
-    """Stage 1 of the workflow: the spreadsheets that go to the customer.
+def prepare_for_customer(input_path, out_dir, cfg, lists=None):
+    """Stage 1 of the workflow: the workbook that goes to the customer.
 
     Removes every zero-dollar line, splits the rest by format into an electronic, a
-    physical and a print + electronic (P-E) spreadsheet, and adds the columns the
-    customer fills in on each (highlighted light yellow; see `customer_columns` in the
-    config: org, fund, expense class, order type and renewal interval on all three,
-    plus location and material type on the physical and P-E files). Writes
-    <out_dir>/customer/<name>_for_customer_<label>.xlsx, a log of the
-    removed lines and a log of the lines that belong in none of the three (Fee or
-    unrecognised format). Everything else about the SOP is left untouched; the remaining
-    rules are applied later, when the filled-in spreadsheets come back."""
+    physical and a print + electronic (P-E) sheet (a type with no lines gets no sheet)
+    and adds the columns the customer fills in on each (highlighted light yellow; see
+    `customer_columns` in the config: org, fund, expense class, order type and renewal
+    interval on all three, plus location and material type on physical and P-E). The first
+    sheet, Defaults, asks the library's setup questions (customer_settings); `lists` holds
+    the options for its drop-downs (customer_settings.tenant_lists; fixed lists only if
+    omitted). Writes <out_dir>/customer/<name>_for_customer.xlsx, a log of the removed
+    lines and a log of the lines that belong on none of the sheets (Fee or unrecognised
+    format). Everything else about the SOP is left untouched; the remaining rules are
+    applied later, when the filled-in workbook comes back."""
     c = cfg["columns"]
+    lists = lists if lists is not None else customer_settings.tenant_lists()
     headers, rows = read_sop(input_path)
     check_headers(headers, cfg)
 
@@ -545,17 +579,21 @@ def prepare_for_customer(input_path, out_dir, cfg):
     folder = Path(out_dir) / "customer"
     folder.mkdir(parents=True, exist_ok=True)
     stem = Path(input_path).stem
-    files, fill_in = {}, {}
+    target = folder / ("%s_for_customer.xlsx" % stem)
+    wb = Workbook()
+    wb.remove(wb.active)
+    customer_settings.add_settings_sheets(wb, cfg, lists)
+    sheets, fill_in = {}, {}
     for route in ROUTES:
         if not kept[route]:
             continue
         fields = customer_fields(route, cfg)
         columns = headers + [name for name in fields if name not in headers]
-        target = folder / ("%s_for_customer_%s.xlsx"
-                           % (stem, cfg["customer_file_labels"][route]))
-        write_workbook(target, columns, kept[route], set(fields),
-                       customer_validations(route, cfg))
-        files[route], fill_in[route] = target, fields
+        name = cfg["customer_file_labels"][route]
+        fill_sheet(wb.create_sheet(name, len(sheets) + 1), columns, kept[route], set(fields),
+                   customer_validations(route, cfg, lists))
+        sheets[route], fill_in[route] = name, fields
+    wb.save(target)
     with open(folder / ("%s_zero_dollar_removed.csv" % stem), "w", newline="",
               encoding="utf-8") as fh:
         w = csv.writer(fh)
@@ -566,26 +604,27 @@ def prepare_for_customer(input_path, out_dir, cfg):
         w = csv.writer(fh)
         w.writerow(["sheet_row", "title", "order_number", "format", "reason"])
         w.writerows(unrouted)
-    report = ["Stage 1: spreadsheets for the customer", "Input: %s" % input_path,
+    report = ["Stage 1: workbook for the customer", "Input: %s" % input_path,
               "Rows read: %d" % len(rows),
               "Zero-dollar lines removed: %d (%d in a package); listed in %s"
               % (len(removed), sum(1 for r in removed if r[3] == "Yes"),
                  "%s_zero_dollar_removed.csv" % stem),
               "Lines not sent (Fee or unrecognized format): %d; listed in %s"
-              % (len(unrouted), "%s_not_sent.csv" % stem)]
+              % (len(unrouted), "%s_not_sent.csv" % stem),
+              "Workbook: %s; first sheet %s (setup questions)" % (
+                  target.name, customer_settings.SETTINGS_SHEET)]
     for route in ROUTES:
-        if route in files:
-            report.append("%s: %d lines -> %s; customer fills in (highlighted): %s" % (
-                cfg["customer_file_labels"][route], len(kept[route]),
-                files[route].name, ", ".join(fill_in[route])))
+        if route in sheets:
+            report.append("sheet %s: %d lines; customer fills in (highlighted): %s" % (
+                sheets[route], len(kept[route]), ", ".join(fill_in[route])))
         else:
-            report.append("%s: no lines; no spreadsheet" % cfg["customer_file_labels"][route])
+            report.append("%s: no lines; no sheet" % cfg["customer_file_labels"][route])
     (folder / ("%s_for_customer_report.txt" % stem)).write_text(
         "\n".join(report) + "\n", encoding="utf-8")
     return {"read": len(rows), "removed": len(removed), "unrouted": len(unrouted),
             "kept": sum(len(v) for v in kept.values()),
             "counts": {r: len(v) for r, v in kept.items()},
-            "files": files, "columns": fill_in}
+            "file": target, "sheets": sheets, "columns": fill_in}
 
 
 def main(argv=None):

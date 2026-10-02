@@ -20,7 +20,7 @@ Two things to know up front:
 |---|---|---|
 | 1 | You / EBSCONET | The EBSCONET order spreadsheet (SOP) is obtained from your EBSCONET representative. |
 | 2 | You | **Before we start:** your FOLIO system is checked against the list in section 1 below, and the choices in section 3 are made. |
-| 3 | EBSCO | We prepare your copy of the spreadsheet: we remove the lines that cost nothing, split the rest by format into up to **three spreadsheets** (electronic, physical, and print + electronic, "P/E"), and add empty columns for you to fill in. We send them to you. |
+| 3 | EBSCO | We prepare your copy of the spreadsheet: we remove the lines that cost nothing, split the rest by format onto up to **three sheets** (electronic, physical, and print + electronic, "P/E") of **one workbook**, and add empty columns for you to fill in. A **Defaults** sheet comes first with a few setup questions. We send you the workbook. |
 | 4 | **You** | **You fill in the highlighted columns on every line of each spreadsheet and send them all back** (section 2). |
 | 5 | EBSCO | We check your codes against your FOLIO system. If anything is wrong (a mistyped code, a fund that does not exist) we send you the list, you correct it, and we check again. This repeats until the files are clean. |
 | 6 | EBSCO | We load the orders into FOLIO as Pending orders. |
@@ -49,16 +49,18 @@ versions; your FOLIO administrator will know where to find them.
   your administrator can work with us on a screen share.)
 
 ## 2. What you fill in
-We send you **up to three spreadsheets**, one for each kind of subscription. If you have no
-subscriptions of a kind, you will not receive that file.
+We send you **one workbook**. Its first sheet, **Defaults**, asks a few setup questions
+(default fund, location, order type and so on); answer them in the yellow "Your answer"
+column, using the drop-downs where offered. After it come up to three sheets, one for each
+kind of subscription. If you have no subscriptions of a kind, that sheet is left out.
 
-| Spreadsheet | Contains | What you fill in |
+| Sheet | Contains | What you fill in |
 |---|---|---|
 | **Electronic** | Online-only titles, databases, e-books | Fund, expense class, organization, **order type and renewal interval** |
 | **Physical** | Print-only titles | Fund, expense class, organization, **order type and renewal interval**, **location and material type** |
 | **P/E** | Print + online titles | Everything above: fund, expense class, organization, order type and renewal interval, location and material type |
 
-In each spreadsheet the columns to fill in are **highlighted in light yellow**. On every line
+On each sheet the columns to fill in are **highlighted in light yellow**. On every line
 please enter:
 
 | Column | On which spreadsheet | What to enter | Where to find it |
@@ -164,11 +166,12 @@ expect. If something is wrong, we can remove and reload the affected orders.
 - [ ] An account or screen-share time for us
 - [ ] Choices in section 3 answered, and the ongoing questions in section 4 answered
 
-**When we send the spreadsheets (electronic, physical, P/E)**
+**When we send the workbook (Defaults, electronic, physical, P/E sheets)**
+- [ ] Answer the questions on the Defaults sheet
 - [ ] Fill in FOLIO Fund on every line
 - [ ] Fill in FOLIO Expense Class, if used
 - [ ] Fill in FOLIO Org, if wanted
-- [ ] Every spreadsheet: choose Ongoing or One-Time from the list on every line; for Ongoing, enter the renewal interval in days
+- [ ] Every sheet: choose Ongoing or One-Time from the list on every line; for Ongoing, enter the renewal interval in days
 - [ ] Physical and P/E: fill in FOLIO Location and FOLIO Material Type
 - [ ] Return **all** the spreadsheets, then correct anything on the list we send back
 

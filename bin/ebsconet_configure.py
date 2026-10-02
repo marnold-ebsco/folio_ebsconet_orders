@@ -16,12 +16,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from pipeline import customer_settings  # noqa: E402
+from pipeline.customer_settings import (  # noqa: E402,F401
+    PAYMENT_METHODS, code_name, fetch, location_text)
 from pipeline.folio_common import connect  # noqa: E402
 
 CONFIG_NAME = "ebsconet_config.json"
 WORKSHEET_NAME = "ebsconet_config_worksheet.xlsx"
-PAYMENT_METHODS = ["Cash", "Credit Card", "EFT", "Deposit Account", "Physical Check",
-                   "Bank Draft", "Lockbox", "Other"]
 LIST_LIMIT = 25
 
 
@@ -100,23 +101,6 @@ def pick_many(items, label, prompt, read=input):
         if numbers and all(1 <= n <= len(shown) for n in numbers):
             return [shown[n - 1] for n in dict.fromkeys(numbers)]
         print("  Enter numbers from the list, e.g. 1,3.")
-
-
-def fetch(client, path, key):
-    """List a FOLIO reference collection (up to 1000 rows); [] if it cannot be read."""
-    try:
-        return client.folio_get(path, key=key, query_params={"limit": 1000}) or []
-    except Exception as exc:  # network / permission problems should not end the wizard
-        print("  Could not read %s: %s" % (path, exc))
-        return []
-
-
-def code_name(item):
-    return "%s - %s" % (item.get("code", ""), item.get("name", ""))
-
-
-def location_text(item):
-    return "%s (%s)" % (item["name"], item["code"])
 
 
 def deep_merge(base, extra):
@@ -248,106 +232,13 @@ def gather(client, cfg, read=input):
 def write_worksheet(client, cfg, path):
     """Write an .xlsx the customer can fill in: one row per setting, a drop-down of the
     tenant's real options where the answer is a single choice, and the lists on extra
-    sheets. The yellow column is theirs to fill."""
+    sheets. The yellow column is theirs to fill. (`ebsconet for-customer` puts the same
+    sheet first in the customer workbook.)"""
     from openpyxl import Workbook
-    from openpyxl.styles import Alignment, Font, PatternFill
-    from openpyxl.worksheet.datavalidation import DataValidation
-
-    def srt(rows, field):
-        return sorted(rows, key=lambda r: r.get(field, ""))
-
-    funds = [code_name(f) for f in srt(fetch(client, "/finance/funds", "funds"), "code")]
-    classes = [code_name(c) for c in srt(
-        fetch(client, "/finance/expense-classes", "expenseClasses"), "code")]
-    orgs = [code_name(o) for o in srt(
-        [o for o in fetch(client, "/organizations/organizations", "organizations")
-         if o.get("isVendor", True)], "code")]
-    locations = [location_text(x) for x in srt(fetch(client, "/locations", "locations"), "name")]
-    mtypes = [m["name"] for m in srt(fetch(client, "/material-types", "mtypes"), "name")]
-    methods = [m["value"] for m in srt(
-        fetch(client, "/orders/acquisition-methods", "acquisitionMethods"), "value")]
-    lists = {"Funds": funds, "ExpenseClasses": classes, "Organizations": orgs,
-             "Locations": locations, "MaterialTypes": mtypes,
-             "AcquisitionMethods": methods, "PaymentMethods": PAYMENT_METHODS,
-             "OrderTypes": ["Ongoing", "One-Time"], "YesNo": ["Yes", "No"]}
-
-    cur = cfg
-    fund = cur.get("fund_by_route", {})
-    folio = cur.get("folio", {})
-    # (setting, what it is, list sheet for a drop-down or None, kind, current value)
-    rows = [
-        ("Fund: electronic", "Fund charged for electronic (online) subscriptions when the "
-         "line has no fund of its own. Needs an Active budget this fiscal year.",
-         "Funds", "one", fund.get("online")),
-        ("Fund: print", "Fund charged for print subscriptions.", "Funds", "one",
-         fund.get("print")),
-        ("Fund: print + electronic", "Fund charged for combined print + electronic "
-         "subscriptions.", "Funds", "one", fund.get("pe")),
-        ("Use expense classes?", "Does the library put an expense class on its orders?",
-         "YesNo", "one", "Yes" if cur.get("rules", {}).get("use_expense_classes", True)
-         else "No"),
-        ("Default expense class", "Expense class used when none is given (skip if the "
-         "answer above is No).", "ExpenseClasses", "one", cur.get("default_expense_class")),
-        ("Subject to expense class (optional)", "Optional: one line per SOP subject, written "
-         "Subject = class code, e.g. Physical Sciences = SER.", None, "text", None),
-        ("Default vendor organization", "Organization used for a subscription when no "
-         "organization is given.", "Organizations", "one", cur.get("default_org")),
-        ("Organization for vendor accounts", "Organization the SOP account numbers are "
-         "added to.", "Organizations", "one", folio.get("vendor_org_code")),
-        ("Locations offered to the customer", "Locations that appear as a drop-down on the "
-         "physical and print+electronic spreadsheets. List every one wanted, separated by "
-         "semicolons (see the Locations sheet). Blank = free text.", None, "text",
-         "; ".join(cur.get("customer_choices", {}).get("location", [])) or None),
-        ("Default location", "Used when the customer leaves the location blank.",
-         "Locations", "one", folio.get("location")),
-        ("Material types offered to the customer", "Material types for the drop-down on the "
-         "physical and print+electronic spreadsheets, separated by semicolons (see the "
-         "MaterialTypes sheet). Blank = free text.", None, "text",
-         "; ".join(cur.get("customer_choices", {}).get("material_type", [])) or None),
-        ("Default material type", "Used when the customer leaves it blank.",
-         "MaterialTypes", "one", folio.get("physical_material_type")),
-        ("Acquisition method", "Acquisition method put on every order line.",
-         "AcquisitionMethods", "one", folio.get("acquisition_method")),
-        ("Vendor account payment method", "Payment method for vendor accounts added from "
-         "the SOP's Account Number column.", "PaymentMethods", "one",
-         folio.get("account_payment_method")),
-        ("Default order type", "Order type when the customer leaves it blank.",
-         "OrderTypes", "one", cur.get("ongoing", {}).get("default_order_type")),
-        ("Default renewal interval (days)", "Days between renewals of an ongoing order, "
-         "when left blank (365 = yearly).", None, "text",
-         cur.get("ongoing", {}).get("interval_days")),
-    ]
 
     wb = Workbook()
-    ws = wb.active
-    ws.title = "Worksheet"
-    ws.append(["Setting", "What it is", "Your answer"])
-    for cell in ws[1]:
-        cell.font = Font(bold=True)
-    yellow = PatternFill("solid", fgColor="FFFFCC")
-    list_ws = {}
-    for name, items in lists.items():
-        sheet = wb.create_sheet(name)
-        sheet.append([name])
-        sheet["A1"].font = Font(bold=True)
-        for item in items:
-            sheet.append([item])
-        sheet.column_dimensions["A"].width = 60
-        list_ws[name] = len(items)
-    for n, (setting, text, source, kind, value) in enumerate(rows, 2):
-        ws.append([setting, text, ""])
-        ws.cell(n, 3).fill = yellow
-        if source and list_ws[source]:
-            dv = DataValidation(type="list", allow_blank=True, showErrorMessage=False,
-                                formula1="=%s!$A$2:$A$%d" % (source, list_ws[source] + 1))
-            ws.add_data_validation(dv)
-            dv.add(ws.cell(n, 3))
-    for col, width in zip("ABC", (38, 70, 50)):
-        ws.column_dimensions[col].width = width
-    for row in ws.iter_rows(min_row=2):
-        for cell in row:
-            cell.alignment = Alignment(wrap_text=True, vertical="top")
-    ws.freeze_panes = "A2"
+    wb.remove(wb.active)
+    customer_settings.add_settings_sheets(wb, cfg, customer_settings.tenant_lists(client))
     wb.save(path)
     return path
 
@@ -376,6 +267,10 @@ def main(argv=None, read=input, connect_fn=connect):
     parser.add_argument("--ini", help="tenant .ini file (default: ask)")
     parser.add_argument("--config", default=CONFIG_NAME,
                         help="config file to create/update (default: %(default)s)")
+    parser.add_argument("--from-worksheet", metavar="FILE",
+                        help="read the answers from the Defaults sheet of a filled-in "
+                             "worksheet or customer workbook and save them into the config "
+                             "(no tenant connection needed)")
     parser.add_argument("--worksheet", nargs="?", const=WORKSHEET_NAME, metavar="FILE",
                         help="write an Excel worksheet of every question and the tenant's "
                              "options for the customer to fill in, instead of asking "
@@ -387,6 +282,27 @@ def main(argv=None, read=input, connect_fn=connect):
     cfg, source = load_config(config_path, app_default)
     print("Starting from %s" % source)
 
+    if args.from_worksheet:
+        answers = customer_settings.read_overrides(args.from_worksheet)
+        if not answers:
+            raise SystemExit("No answers found on a %s sheet in %s."
+                             % (customer_settings.SETTINGS_SHEET, args.from_worksheet))
+        new = deep_merge(copy.deepcopy(cfg), answers)
+        if "expense_class_by_subject" in answers:
+            new["expense_class_by_subject"] = answers["expense_class_by_subject"]
+        print(json.dumps(answers, indent=2))
+        if not ask_yes_no("Save these answers into %s?" % config_path, True, read):
+            print("Nothing written.")
+            return 1
+        if config_path.exists():
+            backup = config_path.with_name("%s.bak-%s" % (
+                config_path.name, datetime.now().strftime("%Y%m%d_%H%M%S")))
+            shutil.copy2(config_path, backup)
+            print("Backed up the old file to %s" % backup)
+        config_path.write_text(json.dumps(new, indent=2) + "\n", encoding="utf-8")
+        print("Wrote %s." % config_path)
+        return 0
+
     ini = args.ini or choose_ini(read)
     if not ini or not Path(ini).exists():
         raise SystemExit("Tenant file %r not found." % ini)
@@ -395,7 +311,7 @@ def main(argv=None, read=input, connect_fn=connect):
     if args.worksheet:
         path = write_worksheet(client, cfg, args.worksheet)
         print("Wrote worksheet %s. Send it to the customer; when it comes back, run "
-              "ebsconet-configure and enter their answers." % path)
+              "ebsconet-configure --from-worksheet FILE to save their answers." % path)
         return 0
     print("Connected. Every question below lists what exists on this tenant.\n"
           "Press Enter to keep the current value where one is shown.")

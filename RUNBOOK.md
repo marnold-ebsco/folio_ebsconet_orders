@@ -14,11 +14,11 @@ unless a command says `--live`.
  1. sends the SOP  ------->  2. ebsconet.py for-customer SOP
                                 (removes every $0 line, splits by
                                  format, adds the columns to fill in)
-                             send  the 3 *_for_customer_*.xlsx ->  3. fills in FOLIO Org,
+                             send  the 1 *_for_customer.xlsx   ->  3. fills in FOLIO Org,
                                                                    Fund, Expense Class on
                                                                    every line; Order Type
                                                                    + Renewal Interval
-                                                                   (all three files);
+                                                                   (all three sheets);
                                                                    Location + Material
                                                                    Type (physical, P-E)
                              4. receive the filled-in files  <--
@@ -41,7 +41,7 @@ One-time per tenant (before the first load): section A below. The `setup --live`
 ### The five commands
 | Command | When | What it does | Writes to FOLIO? |
 |---|---|---|---|
-| `ebsconet.py for-customer SOP.xlsx` | step 2 | Removes every zero-dollar line; splits the rest into an **electronic**, a **physical** and a **P-E** spreadsheet, each with its own highlighted customer columns; logs what was removed or not sent | no |
+| `ebsconet.py for-customer SOP.xlsx` | step 2 | Removes every zero-dollar line; writes ONE workbook: a **Defaults** sheet of setup questions, then an **electronic**, a **physical** and a **P-E** sheet, each with its own highlighted customer columns; logs what was removed or not sent | no |
 | `ebsconet.py build FILLED*.xlsx` | step 5 | Takes the customer's filled-in files (all three, or one), applies the remaining rules, uses the customer's values, builds the MARC files and `order_settings.csv` | no |
 | `ebsconet.py setup --ini TENANT.ini` | once per tenant | Adds the SOP's account numbers to the vendor organization; creates the Online / Print / P-E Data Import profiles (the profiles are needed only for `--use-marc`) | only with `--live` |
 | `ebsconet.py load --ini TENANT.ini` | steps 6-7 | Creates the POs through the Orders API (default; adds SOP account numbers to the vendors). With `--use-marc`, for each MARC file: preflight checks, then upload, import, verify, clean up empty product IDs, audit log | only with `--live` |
@@ -91,17 +91,18 @@ the ones you run separately, when something needs fixing.
 - [ ] Put the SOP .xlsx in the folder.
 - [ ] `.venv/bin/python ebsconet.py for-customer SOP.xlsx`
 - [ ] Read `out/customer/<name>_for_customer_report.txt`: lines read, **zero-dollar
-      lines removed**, lines not sent, and the line count of each spreadsheet. The removed
+      lines removed**, lines not sent, and the line count of each sheet. The removed
       lines are listed in `out/customer/<name>_zero_dollar_removed.csv`; skim them. Fee
       lines and lines with an unrecognized format are not sent to the customer and are
       listed in `out/customer/<name>_not_sent.csv`.
-- [ ] Send the customer the files in `out/customer/` (a type with no lines gets no file):
-      `<name>_for_customer_electronic.xlsx`, `..._physical.xlsx` and `..._P-E.xlsx`, with
-      the note below.
+- [ ] Send the customer `out/customer/<name>_for_customer.xlsx` (a type with no lines gets
+      no sheet; add `--ini <tenant>.ini` to the command for real drop-down options), with
+      the note below. Its first sheet, **Defaults**, holds the library's setup answers;
+      after it comes back run `ebsconet-configure --from-worksheet FILE` to save them.
 
-What the customer fills in on each file (highlighted light yellow):
+What the customer fills in on each sheet (highlighted light yellow):
 
-| Spreadsheet | FOLIO Org / Fund / Expense Class | FOLIO Order Type + FOLIO Renewal Interval (Days) | FOLIO Location + FOLIO Material Type |
+| Sheet | FOLIO Org / Fund / Expense Class | FOLIO Order Type + FOLIO Renewal Interval (Days) | FOLIO Location + FOLIO Material Type |
 |---|---|---|---|
 | electronic (online only, database, e-book) | yes | yes | |
 | physical (print) | yes | yes (interval rarely used) | yes |
@@ -260,7 +261,7 @@ files together (or use a separate `--out` folder per SOP, e.g. `--out out/2026-s
 ## Files produced (in `out/`)
 | File | Made by | What it is |
 |---|---|---|
-| `customer/<name>_for_customer_electronic / _physical / _P-E.xlsx` | for-customer | Send to the customer (one per type that has lines) |
+| `customer/<name>_for_customer.xlsx` | for-customer | Send to the customer (Defaults sheet + one sheet per type that has lines) |
 | `customer/<name>_zero_dollar_removed.csv`, `..._not_sent.csv`, `..._report.txt` | for-customer | What was removed, what was not sent (Fee / unrecognized format) and why |
 | `order_settings.csv` | build | Each order: Ongoing or One-Time, and its renewal interval; read by `finish --use-marc` |
 | `library-EBSCONET_online / -print / _P-E.xlsx` | build | The filled-in lines split by format |

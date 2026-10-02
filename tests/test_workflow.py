@@ -50,10 +50,11 @@ def test_stage1_removes_zero_dollar_lines_and_adds_highlighted_columns(cfg, tmp_
     assert s["columns"] == {"online": ["FOLIO Org", "FOLIO Fund", "FOLIO Expense Class",
                                        "FOLIO Order Type",
                                        "FOLIO Renewal Interval (Days)"]}
-    assert s["files"] == {"online": tmp_path / "out" / "customer"
-                          / "SOP_for_customer_electronic.xlsx"}
-
-    ws = load_workbook(s["files"]["online"]).active
+    assert s["file"] == tmp_path / "out" / "customer" / "SOP_for_customer.xlsx"
+    assert s["sheets"] == {"online": "electronic"}
+    wb = load_workbook(s["file"])
+    assert wb.sheetnames[:2] == ["Defaults", "electronic"]      # settings first
+    ws = wb["electronic"]
     names = [c.value for c in ws[1]]
     assert names == HEADERS + s["columns"]["online"]
     assert [ws.cell(row=r, column=1).value for r in range(2, ws.max_row + 1)] == [
@@ -80,10 +81,10 @@ def test_stage1_does_not_duplicate_columns_already_in_the_sop(cfg, tmp_path):
     src = tmp_path / "SOP.xlsx"
     make_sop(src, [dict(ROWS[0], **{"FOLIO Fund": "F1"})], headers)
     s = cli.prepare_for_customer(src, tmp_path / "out", cfg)
-    names = [c.value for c in load_workbook(s["files"]["online"]).active[1]]
+    ws = load_workbook(s["file"])["electronic"]
+    names = [c.value for c in ws[1]]
     assert names.count("FOLIO Fund") == 1
-    assert load_workbook(s["files"]["online"]).active.cell(
-        row=2, column=names.index("FOLIO Fund") + 1).value == "F1"
+    assert ws.cell(row=2, column=names.index("FOLIO Fund") + 1).value == "F1"
 
 
 def test_stage1_leaves_out_expense_class_when_not_used(cfg, tmp_path):
@@ -271,17 +272,15 @@ def test_stage1_writes_one_spreadsheet_per_type_with_its_own_columns(cfg, tmp_pa
     s = cli.prepare_for_customer(src, tmp_path / "out", cfg)
     assert s["counts"] == {"online": 2, "print": 1, "pe": 1}
     assert s["unrouted"] == 2
-    assert sorted(p.name for p in s["files"].values()) == [
-        "SOP_for_customer_P-E.xlsx", "SOP_for_customer_electronic.xlsx",
-        "SOP_for_customer_physical.xlsx"]
-    added = {r: load_workbook(p).active[1] for r, p in s["files"].items()}
+    wb = load_workbook(s["file"])
+    assert wb.sheetnames[:4] == ["Defaults", "electronic", "physical", "P-E"]
+    added = {r: wb[name][1] for r, name in s["sheets"].items()}
     added = {r: [c.value for c in row][len(SPLIT_HEADERS):] for r, row in added.items()}
     assert added["online"] == ["FOLIO Org", "FOLIO Fund", "FOLIO Expense Class",
                                "FOLIO Order Type", "FOLIO Renewal Interval (Days)"]
     assert added["pe"] == added["online"] + ["FOLIO Location", "FOLIO Material Type"]
     assert added["print"] == added["pe"]        # physical asks the same questions
-    titles = [r[0].value for r in load_workbook(s["files"]["online"]).active.iter_rows(
-        min_row=2)]
+    titles = [r[0].value for r in wb["electronic"].iter_rows(min_row=2)]
     assert titles == ["E1", "E2"]
     not_sent = list(csv.reader(open(tmp_path / "out" / "customer" / "SOP_not_sent.csv",
                                     encoding="utf-8")))
@@ -293,7 +292,7 @@ def test_stage1_order_type_is_a_drop_down_and_interval_a_whole_number(cfg, tmp_p
     src = tmp_path / "SOP.xlsx"
     make_sop(src, SPLIT_ROWS, SPLIT_HEADERS)
     s = cli.prepare_for_customer(src, tmp_path / "out", cfg)
-    ws = load_workbook(s["files"]["pe"]).active
+    ws = load_workbook(s["file"])["P-E"]
     names = [c.value for c in ws[1]]
     letter = lambda name: ws.cell(row=1, column=names.index(name) + 1).column_letter  # noqa
     checks = {str(dv.sqref): dv for dv in ws.data_validations.dataValidation}
@@ -304,15 +303,87 @@ def test_stage1_order_type_is_a_drop_down_and_interval_a_whole_number(cfg, tmp_p
     assert (days.type, days.operator, days.formula1) == ("whole", "greaterThan", "0")
     loc = checks["%s2:%s1000" % ((letter("FOLIO Location"),) * 2)]
     assert loc.type == "list" and "TEST-EBSCONET-LOC" in loc.formula1
-    phys = load_workbook(s["files"]["print"]).active
+    phys = load_workbook(s["file"])["physical"]
     assert len(phys.data_validations.dataValidation) == 4     # type, days, loc, material
 
 
-def test_stage1_makes_no_file_for_a_type_with_no_lines(cfg, tmp_path):
+def test_stage1_makes_no_sheet_for_a_type_with_no_lines(cfg, tmp_path):
     src = tmp_path / "SOP.xlsx"
     make_sop(src, SPLIT_ROWS[:2], SPLIT_HEADERS)
     s = cli.prepare_for_customer(src, tmp_path / "out", cfg)
-    assert list(s["files"]) == ["online"]
+    assert list(s["sheets"]) == ["online"]
+    assert "physical" not in load_workbook(s["file"]).sheetnames
+
+
+def test_stage1_defaults_sheet_uses_tenant_lists_for_drop_downs(cfg, tmp_path):
+    from pipeline import customer_settings
+    cfg["customer_choices"] = {"location": [], "material_type": []}
+    lists = customer_settings.tenant_lists()
+    lists["Funds"] = ["F1 - One", "F2 - Two"]
+    lists["Locations"] = ["Main (MAIN)", "Annex (ANX)"]
+    src = tmp_path / "SOP.xlsx"
+    make_sop(src, SPLIT_ROWS, SPLIT_HEADERS)
+    s = cli.prepare_for_customer(src, tmp_path / "out", cfg, lists)
+    wb = load_workbook(s["file"])
+    assert "Funds" in wb.sheetnames and "Locations" in wb.sheetnames
+    forms = [dv.formula1 for dv in wb["Defaults"].data_validations.dataValidation]
+    assert "=Funds!$A$2:$A$3" in forms
+    loc = [dv.formula1 for dv in wb["physical"].data_validations.dataValidation]
+    assert "=Locations!$A$2:$A$3" in loc
+    assert "MaterialTypes" not in wb.sheetnames          # empty list: no sheet, free text
+
+
+def _filled_workbook(cfg, tmp_path):
+    src = tmp_path / "SOP.xlsx"
+    make_sop(src, SPLIT_ROWS, SPLIT_HEADERS)
+    s = cli.prepare_for_customer(src, tmp_path / "out", cfg)
+    wb = load_workbook(s["file"])
+    return s["file"], wb
+
+
+def test_read_sop_reads_every_data_sheet_but_not_defaults(cfg, tmp_path):
+    from pipeline.ebsconet_prep import read_sop
+    path, wb = _filled_workbook(cfg, tmp_path)
+    headers, rows = read_sop(path, all_sheets=True)
+    assert sorted(r["Title Name"] for r in rows) == ["B1", "E1", "E2", "P1"]
+    assert {r["_row"] for r in rows} == {"electronic:2", "electronic:3", "physical:2", "P-E:2"}
+    assert "Setting" not in headers
+
+
+def test_read_sops_mixes_old_separate_files_and_the_new_workbook(cfg, tmp_path):
+    from pipeline.ebsconet_prep import read_sops
+    path, _ = _filled_workbook(cfg, tmp_path)
+    old = tmp_path / "old.xlsx"
+    make_sop(old, SPLIT_ROWS[:1], SPLIT_HEADERS)
+    _, rows = read_sops([path, old])
+    assert len(rows) == 5
+    assert "old:2" in {r["_row"] for r in rows}
+    assert "SOP_for_customer:electronic:2" in {r["_row"] for r in rows}
+
+
+def test_answers_on_the_defaults_sheet_become_config_overrides(cfg, tmp_path):
+    from pipeline import customer_settings as cs
+    path, wb = _filled_workbook(cfg, tmp_path)
+    ws = wb["Defaults"]
+    answers = {"Fund: electronic": "ELEC2 - Electronic two", "Use expense classes?": "No",
+               "Default vendor organization": "ACME - Acme", "Default location": "Main (MAIN)",
+               "Default order type": "one time", "Default renewal interval (days)": 180,
+               "Subject to expense class (optional)": "Physical Sciences = SER; Art = ART"}
+    for row in ws.iter_rows(min_row=2):
+        if row[0].value in answers:
+            row[3].value = answers[row[0].value]
+    wb.save(path)
+    assert cs.read_overrides(path) == {
+        "fund_by_route": {"online": "ELEC2"}, "rules": {"use_expense_classes": False},
+        "default_org": "ACME", "folio": {"location": "Main (MAIN)"},
+        "ongoing": {"default_order_type": "One-Time", "interval_days": 180},
+        "expense_class_by_subject": {"Physical Sciences": "SER", "Art": "ART"}}
+
+
+def test_blank_defaults_sheet_overrides_nothing(cfg, tmp_path):
+    from pipeline import customer_settings as cs
+    path, _ = _filled_workbook(cfg, tmp_path)
+    assert cs.read_overrides(path) == {}
 
 
 def test_build_combines_the_three_files_and_writes_order_settings(cfg, tmp_path):

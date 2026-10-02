@@ -18,7 +18,7 @@ except pymarc / openpyxl / httpx.
 
 ## Workflow (rehearsed end to end on bugfest, 2026-09-30)
 1. EBSCONET sends the SOP. 2. `ebsconet.py for-customer` removes every zero-dollar line and
-adds the columns the customer fills in (FOLIO Org / Fund / Expense Class, highlighted).
+adds the columns the customer fills in (FOLIO Org / Fund / Expense Class, highlighted), in one workbook with a Defaults sheet first.
 3. The customer fills them in line by line and returns the file. 4. `ebsconet.py build`
 processes it (remaining rules, the customer's values, split by format, MARC files).
 5. `ebsconet.py load` (dry run) reports errors such as mistyped codes; the

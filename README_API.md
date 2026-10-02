@@ -69,8 +69,9 @@ drop-downs hold real locations and material types.
 `--worksheet FILE`; default `ebsconet_config_worksheet.xlsx`). It connects the same way but asks
 nothing: it writes an Excel workbook with one row per setting (name, what it is, a yellow
 "Your answer" cell with a drop-down of the tenant's real options) plus one sheet per option list.
-Send it to the customer, then run `ebsconet-configure` and enter their answers. Settings that take
-several values (locations and material types offered) are filled in as semicolon-separated text.
+Send it to the customer, then run `ebsconet-configure --from-worksheet FILE` to save their answers
+into the config (or run `ebsconet-configure` and type them in). The same sheet is the first sheet
+of the workbook `for-customer` makes, so the customer can answer everything in one file.
 
 **Config file `ebsconet_config.json`** holds what a library chooses. Edit it before the
 first load. The fund, expense class and organization entries are only the *defaults* used
@@ -109,17 +110,33 @@ dry run of `load` (below), which logs in and reports any code it cannot find.
 .venv/bin/python ebsconet.py for-customer SOP.xlsx
 ```
 Removes every zero-dollar line, drops "Fee" and unrecognized-format lines, splits the rest
-by format into three spreadsheets in `out/customer/`, and adds the highlighted columns the
-customer fills in **line by line**. A format with no lines gets no file. Read
-`out/customer/<name>_for_customer_report.txt` (lines read, removed, not sent, per file);
+by format, and adds the highlighted columns the customer fills in **line by line**. It writes
+ONE workbook, `out/customer/<name>_for_customer.xlsx`, with these sheets in order:
+
+1. **Defaults**: the library's setup questions (default fund per type, expense classes,
+   organization, location, material type, acquisition method, payment method, order type and
+   renewal interval), one row each with a yellow "Your answer" cell. Same questions as
+   `ebsconet-configure --worksheet`.
+2. **electronic**, **physical**, **P-E**: the lines of each type (a type with no lines gets no
+   sheet) with its own customer columns.
+3. The option lists the Defaults drop-downs use (`Funds`, `Locations`, ...), at the end.
+
+Add `--ini <tenant>.ini` to fill the Defaults drop-downs, and the location and material-type
+drop-downs on the data sheets, with the tenant's real options (otherwise they are free text
+unless `customer_choices` in your config lists values). Read
+`out/customer/<name>_for_customer_report.txt` (lines read, removed, not sent, per sheet);
 removed lines are in `<name>_zero_dollar_removed.csv`, lines not sent in
-`<name>_not_sent.csv`. Send the customer the `_for_customer_electronic.xlsx`,
-`_physical.xlsx` and `_P-E.xlsx` files.
+`<name>_not_sent.csv`. Send the customer the one `_for_customer.xlsx` file.
+
+When it comes back, `build` reads every data sheet and applies any answers on the Defaults
+sheet for that run. To keep them for `load` and later runs, save them into the config:
+`ebsconet-configure --from-worksheet <returned file>.xlsx`. (The older three separate files
+are still accepted by `build`.)
 
 **Customer columns** (which columns go on which file is `customer_columns` in
 `pipeline/pipeline_config.json`):
 
-| Spreadsheet | Columns |
+| Sheet | Columns |
 |---|---|
 | electronic (`online`) | `FOLIO Org`, `FOLIO Fund`, `FOLIO Expense Class`, `FOLIO Order Type`, `FOLIO Renewal Interval (Days)` |
 | physical (`print`) | the five above plus `FOLIO Location`, `FOLIO Material Type` |
@@ -263,7 +280,7 @@ Active budget.
 ## Outputs (in `out/`)
 | File | Made by | What it is |
 |---|---|---|
-| `customer/<name>_for_customer_electronic / _physical / _P-E.xlsx` | for-customer | Send to the customer |
+| `customer/<name>_for_customer.xlsx` | for-customer | Send to the customer (Defaults sheet + one sheet per type) |
 | `customer/<name>_zero_dollar_removed.csv`, `_not_sent.csv`, `_report.txt` | for-customer | What was removed or not sent, and why |
 | `library-EBSCONET_online / -print / _P-E.xlsx` | build | The filled-in lines split by format; what `load` reads |
 | `prep_report.txt`, `prep_exclusions.csv`, `prep_no_issn.csv`, `prep_defaults_used.csv` | build | What was excluded, loaded without an ISSN, or given a default |

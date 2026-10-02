@@ -1,11 +1,12 @@
 """EBSCONET SOP -> FOLIO orders: one command with a step per stage of the workflow.
 
   for-customer SOP.xlsx   stage 1: drop zero-dollar lines, split by format and add the
-                          columns the customer fills in -> three spreadsheets in
-                          out/customer/ (electronic, physical, P-E); send these
-  build FILLED.xlsx ...   stage 2: process the filled-in spreadsheets (one, or all
-                          three) and build the MARC files (out/library-EBSCONET_*.xlsx
-                          and out/marc/*.mrc)
+                          columns the customer fills in -> ONE workbook in out/customer/:
+                          a Defaults sheet of setup questions, then electronic, physical
+                          and P-E sheets; send this (--ini adds the tenant's real options)
+  build FILLED.xlsx ...   stage 2: process the filled-in workbook (or the older separate
+                          spreadsheets) and build the MARC files
+                          (out/library-EBSCONET_*.xlsx and out/marc/*.mrc)
   setup                   once per tenant: vendor accounts and Data Import profiles
                           (the profiles are only needed for --use-marc)
   load                    create the POs through the Orders API (default); with
@@ -20,6 +21,8 @@ import argparse
 import sys
 from pathlib import Path
 
+from pipeline import customer_settings
+from pipeline import ebsconet_prep as prep
 from pipeline.ebsconet_prep import ROUTES, load_config, prepare, prepare_for_customer
 from pipeline.ebsconet_to_marc import convert_all
 from pipeline.folio_setup import ROUTE_LABEL
@@ -37,17 +40,30 @@ def marc_files(out, cfg):
 
 
 def cmd_for_customer(args, cfg):
-    s = prepare_for_customer(args.input, args.out, cfg)
+    lists = None
+    if args.ini:
+        from pipeline.folio_common import connect
+        lists = customer_settings.tenant_lists(connect(args.ini))
+    s = prepare_for_customer(args.input, args.out, cfg, lists)
     print("%d lines read; %d zero-dollar lines removed; %d lines not sent (Fee or "
           "unrecognized format); %d lines for the customer"
           % (s["read"], s["removed"], s["unrouted"], s["kept"]))
-    for route, path in s["files"].items():
-        print("send: %s (%d lines; customer fills in: %s)" % (
-            path, s["counts"][route], ", ".join(s["columns"][route])))
+    print("send: %s" % s["file"])
+    print("  sheet %s: the library's setup questions" % customer_settings.SETTINGS_SHEET)
+    for route, name in s["sheets"].items():
+        print("  sheet %s: %d lines; customer fills in: %s" % (
+            name, s["counts"][route], ", ".join(s["columns"][route])))
     return 0
 
 
 def cmd_build(args, cfg):
+    for path in args.input:
+        answered = customer_settings.read_overrides(path)
+        if answered:
+            cfg.update(prep.merge(cfg, answered))
+            print("%s: applied the library's answers from the %s sheet (for this run only; "
+                  "`ebsconet-configure --from-worksheet %s` saves them for load)"
+                  % (Path(path).name, customer_settings.SETTINGS_SHEET, path))
     s = prepare(args.input, args.out, cfg, cfg["headers_file"])
     results = convert_all(args.out, cfg, cfg["headers_file"])
     print(Path(args.out, "prep_report.txt").read_text(encoding="utf-8"))
@@ -172,11 +188,13 @@ def build_parser():
 
     s = sub.add_parser("for-customer", help="stage 1: spreadsheet to send to the customer")
     s.add_argument("input", help="the SOP .xlsx received from EBSCONET")
+    s.add_argument("--ini", help="tenant .ini file: fills the Defaults drop-downs (and "
+                   "location / material type) with the tenant's real options")
     s.set_defaults(func=cmd_for_customer)
 
     s = sub.add_parser("build", help="stage 2: process the filled-in spreadsheet")
-    s.add_argument("input", nargs="+", help="the spreadsheet(s) the customer sent back "
-                   "(electronic, physical and P-E)")
+    s.add_argument("input", nargs="+", help="the workbook the customer sent back (or "
+                   "the older separate electronic, physical and P-E files)")
     s.set_defaults(func=cmd_build)
 
     for name, func, text in (("setup", cmd_setup, "once per tenant: accounts and profiles"),
