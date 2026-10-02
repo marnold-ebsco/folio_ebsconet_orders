@@ -189,6 +189,23 @@ chmod +x "${INSTALL_DIR}/bin/ebsconet"
 mkdir -p "$HOME/.local/bin"
 ln -sf "${INSTALL_DIR}/bin/ebsconet" "$HOME/.local/bin/ebsconet"
 
+# Put ~/.local/bin on PATH for future shells (idempotent), and tell the user if the
+# current shell needs a reload.
+PATH_LINE='export PATH="$HOME/.local/bin:$PATH"'
+PATH_NOTE=""
+case ":$PATH:" in
+  *":$HOME/.local/bin:"*) ;;
+  *)
+    for rc in "$HOME/.bashrc" "$HOME/.profile"; do
+      [[ -f "$rc" ]] || continue
+      grep -qF "$PATH_LINE" "$rc" || printf '\n# added by ebsconet install.sh\n%s\n' "$PATH_LINE" >> "$rc"
+    done
+    [[ -f "$HOME/.bashrc" || -f "$HOME/.profile" ]] || \
+      printf '%s\n' "$PATH_LINE" > "$HOME/.profile"
+    PATH_NOTE="  source ~/.bashrc               # or open a new shell, so ebsconet is on PATH"
+    ;;
+esac
+
 echo "${REMOTE_SHA}" > "${INSTALL_DIR}/${VERSION_MARKER}"
 
 # $0 is "bash" when run via `curl | bash -s --`, so it is not a usable path to
@@ -206,7 +223,8 @@ Done. ebsconet (commit ${REMOTE_SHA:0:12}, loader ${LOADER_TAG}) is ready at:
 Configure and run:
   cd "${INSTALL_DIR}/work"
   cp sample.ini <tenant>.ini     # fill in; never commit or copy credentials around
-  ebsconet --help                # add ~/.local/bin to PATH if not found
+${PATH_NOTE}
+  ebsconet --help
 
 Check for updates later without changing anything:
   ${RERUN_CMD} --dir "${INSTALL_DIR}" --check
