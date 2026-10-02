@@ -65,6 +65,13 @@ file as `ebsconet_config.json.bak-<timestamp>`, and writes the new one. Keys it 
 about (e.g. `org_by_publisher`) are kept. Run it before `for-customer` so the customer's
 drop-downs hold real locations and material types.
 
+**If the customer should choose the values:** run `ebsconet-configure --worksheet` (optionally
+`--worksheet FILE`; default `ebsconet_config_worksheet.xlsx`). It connects the same way but asks
+nothing: it writes an Excel workbook with one row per setting (name, what it is, a yellow
+"Your answer" cell with a drop-down of the tenant's real options) plus one sheet per option list.
+Send it to the customer, then run `ebsconet-configure` and enter their answers. Settings that take
+several values (locations and material types offered) are filled in as semicolon-separated text.
+
 **Config file `ebsconet_config.json`** holds what a library chooses. Edit it before the
 first load. The fund, expense class and organization entries are only the *defaults* used
 when the customer leaves a cell blank; the values in the repository are TEST placeholders.

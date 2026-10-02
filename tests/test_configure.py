@@ -91,3 +91,20 @@ def test_decline_writes_nothing(tmp_path, monkeypatch):
                      connect_fn=lambda ini: FakeClient())
     assert rc == 1
     assert not (tmp_path / "ebsconet_config.json").exists()
+
+
+def test_worksheet(tmp_path, monkeypatch):
+    from openpyxl import load_workbook
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "t.ini").write_text("okapiUrl=x\n")
+    rc = cfgmod.main(["--ini", "t.ini", "--worksheet"], connect_fn=lambda ini: FakeClient())
+    assert rc == 0
+    wb = load_workbook(tmp_path / cfgmod.WORKSHEET_NAME)
+    ws = wb["Worksheet"]
+    assert [c.value for c in ws[1]] == ["Setting", "What it is", "Your answer"]
+    assert ws.max_row == 17
+    assert [r[0] for r in wb["Funds"].iter_rows(values_only=True)] == [
+        "Funds", "ELEC - Electronic", "PRINT - Print"]
+    assert [r[0] for r in wb["Organizations"].iter_rows(values_only=True)] == [
+        "Organizations", "EBSCO - EBSCO"]
+    assert len(ws.data_validations.dataValidation) > 5
