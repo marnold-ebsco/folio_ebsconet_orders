@@ -168,6 +168,11 @@ def customer_value(row, column):
     return "" if blank(value) else str(value).strip()
 
 
+def code_value(row, column):
+    """customer_value() for a drop-down of "CODE - Name" entries: just the code."""
+    return customer_value(row, column).split(" - ", 1)[0].strip()
+
+
 def cancellation_restriction(cancellable):
     """SOP 'Cancellable' Yes/No -> FOLIO cancellationRestriction (inverted): a title
     that is not cancellable is restricted. Anything else is left blank."""
@@ -343,13 +348,13 @@ def enrich(row, route, cfg):
         row.get(c["descriptor"]), row.get(c["frequency"]), cfg["description_separator"])
     # FOLIO Fund / Expense Class / Org are filled in by the customer line by line in the
     # SOP; a blank cell (or a missing column) falls back to the config defaults.
-    out[a["fund"]] = customer_value(row, a["fund"]) or cfg["fund_by_route"][route]
+    out[a["fund"]] = code_value(row, a["fund"]) or cfg["fund_by_route"][route]
     out[a["expense_class"]] = (
-        customer_value(row, a["expense_class"])
+        code_value(row, a["expense_class"])
         or cfg["expense_class_by_subject"].get(
             str(row.get(c["subject"]) or "").strip(), cfg["default_expense_class"])
         if cfg["rules"].get("use_expense_classes", True) else "")
-    out[a["org"]] = customer_value(row, a["org"])
+    out[a["org"]] = code_value(row, a["org"])
     out[a["order_type"]], out[a["renewal_interval"]] = "", ""
     out[a["order_type"]], out[a["renewal_interval"]], more = order_settings(row, cfg)
     warnings += more
@@ -553,7 +558,9 @@ def customer_validations(route, cfg, lists=None):
         dv.prompt, dv.promptTitle = ("Days between renewals. Needed only when the "
                                      "order type is Ongoing.", "Renewal interval")
         checks[a["renewal_interval"]] = dv
-    for key, sheet in (("location", "Locations"), ("material_type", "MaterialTypes")):
+    for key, sheet in (("org", "Organizations"), ("fund", "Funds"),
+                       ("expense_class", "ExpenseClasses"), ("location", "Locations"),
+                       ("material_type", "MaterialTypes")):
         options = cfg.get("customer_choices", {}).get(key) or []
         formula = ('"%s"' % ",".join(options) if options
                    else customer_settings.list_range(sheet, lists or {}))

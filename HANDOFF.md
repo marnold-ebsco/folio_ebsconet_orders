@@ -136,6 +136,37 @@ python3-venv`).
   removed). Rows 4737-4746 are 10 appended individual-book Print rows with no dates or frequency
   (good for the no-dates path).
 
+## Bugfest end-to-end run "testLibrary" (2026-10-02) and how to repeat it
+Done on bugfest from a copy of `work/TestEBSCOnet.xlsx` named `work/testLibrary_ebsconet.xlsx`:
+`for-customer --ini sunflower_bugfest.ini` -> filled in as the customer
+(`out/customer/testLibrary_ebsconet_filled.xlsx`: Defaults answered, fund TEST-ELEC / TEST-PRINT,
+expense class cycling GEN / PHY / SOC, access provider EBSCO on electronic only, location
+`test_ebsconet_location (TEST-EBSCONET-LOC)`, material type journal) -> `build` ->
+`ebsconet-configure --from-worksheet` -> `load` dry run (150) -> `load --live` (150 created,
+0 errors, account RU22774-06 added) -> `finish` (150 POL rows). All 150 POs were then deleted
+with `folio_delete_orders.py` (list `out/delete_testlibrary.csv`, backups in
+`out/deleted_backup_testlibrary/`, log `out/delete_live.csv`). Vendor account RU22774-06 remains.
+Fixed on the way (uncommitted until committed): `build` no longer writes MARC unless
+`--use-marc` (and no longer needs `order_marc_headers.xlsx`); the adapter defaults
+`folio.po_number_reference_type`; Fund / Expense Class / Access Provider columns now have
+drop-downs ("CODE - Name" from `--ini`) and `build` keeps only the code (`code_value()`).
+
+**To start the run again** (from `work/`, via `bin/ebsconet-dev` or `../.venv/bin/python ../ebsconet.py`):
+1. `for-customer testLibrary_ebsconet.xlsx --ini sunflower_bugfest.ini` (regenerates the
+   workbook with the new drop-downs; the filled copy from the earlier run is kept and still
+   valid, since a bare code or "CODE - Name" both work). Re-fill, or reuse
+   `out/customer/testLibrary_ebsconet_filled.xlsx` as is.
+2. `build out/customer/testLibrary_ebsconet_filled.xlsx` (no MARC).
+3. `echo y | ../.venv/bin/python ../bin/ebsconet_configure.py --from-worksheet <filled>`
+   (needs the `y`; it asks to confirm and fails without a terminal). Already applied to
+   `work/ebsconet_config.json` (backup `.bak-*` beside it).
+4. `load --ini sunflower_bugfest.ini` (dry run), then `--live`, then `finish --ini ... --live`.
+5. Spot-check POs in the FOLIO UI (still NOT done: no UI check of the testLibrary POs).
+6. Delete: build the CSV from `out/pol_export.csv` (type `PO`), dry run, then `--live`
+   (the dry run takes about 2 minutes for 150; run it in the background).
+Open points from this run: prep report counts print rows in "Access Provider blank on N of 150"
+though the column does not apply to them; `--from-worksheet` needs a terminal for its prompt.
+
 ## NEXT STEPS, in order
 1. You: EC2 / real-tenant test. Re-run `install.sh` first, then `ebsconet-configure` (or
    `--worksheet`), `for-customer` (the Moffitt files were built from the stock TEST config, so

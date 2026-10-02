@@ -68,7 +68,7 @@ def cmd_build(args, cfg):
                   "`ebsconet-configure --from-worksheet %s` saves them for load)"
                   % (Path(path).name, customer_settings.SETTINGS_SHEET, path))
     s = prepare(args.input, args.out, cfg, cfg["headers_file"])
-    results = convert_all(args.out, cfg, cfg["headers_file"])
+    results = convert_all(args.out, cfg, cfg["headers_file"]) if args.use_marc else []
     print(Path(args.out, "prep_report.txt").read_text(encoding="utf-8"))
     bad = False
     for r in results:
@@ -198,6 +198,8 @@ def build_parser():
     s = sub.add_parser("build", help="stage 2: process the filled-in spreadsheet")
     s.add_argument("input", nargs="+", help="the workbook the customer sent back (or "
                    "the older separate electronic, physical and P-E files)")
+    s.add_argument("--use-marc", action="store_true",
+                   help="also write the MARC files (out/marc/*.mrc) for the Data Import route")
     s.set_defaults(func=cmd_build)
 
     for name, func, text in (("setup", cmd_setup, "once per tenant: accounts and profiles"),

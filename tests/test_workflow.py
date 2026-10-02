@@ -111,7 +111,7 @@ def test_build_uses_the_filled_in_columns(cfg, tmp_path, capsys):
     cfg_path.write_text((ROOT / "ebsconet_config.json").read_text(encoding="utf-8"),
                         encoding="utf-8")
     rc = cli.main(["--config", str(cfg_path), "--out", str(tmp_path / "out"),
-                   "build", str(src)])
+                   "build", "--use-marc", str(src)])
     assert rc == 0                      # (the tag map path is relative to the repo root)
     mrk = (tmp_path / "out" / "marc" / "library-EBSCONET_online.mrk").read_text(
         encoding="utf-8")
@@ -499,3 +499,28 @@ def test_stage1_drops_configured_columns_but_never_required_ones(cfg, tmp_path):
     names = [c.value for c in ws[1]]
     assert "Invoice Number" not in names and "Subscriber Name" not in names
     assert "Title Name" in names and "Account Number" in names
+
+
+def test_build_writes_no_marc_by_default(cfg, tmp_path):
+    headers = ["Title Name", "ISSN", "Format", "Start Date", "Expiration Date",
+               "Order Number", "Total Cost", "Publisher Name", "Subject Category"]
+    row = {"Title Name": "Journal", "ISSN": "1234-5678", "Format": "Online Only",
+           "Start Date": "01/01/2026", "Expiration Date": "12/31/2026",
+           "Order Number": "U1", "Total Cost": 50, "Publisher Name": "Pub",
+           "Subject Category": "Art"}
+    src = tmp_path / "filled.xlsx"
+    make_sop(src, [row], headers)
+    cfg_path = tmp_path / "cfg.json"
+    cfg_path.write_text((ROOT / "ebsconet_config.json").read_text(encoding="utf-8"),
+                        encoding="utf-8")
+    assert cli.main(["--config", str(cfg_path), "--out", str(tmp_path / "out"),
+                     "build", str(src)]) == 0
+    assert not (tmp_path / "out" / "marc").exists()
+
+
+def test_code_value_keeps_only_the_code_of_a_dropdown_pick():
+    from pipeline import ebsconet_prep as prep
+    row = {"F": "TEST-ELEC - test_ebsconet_fund_electronic", "G": " GEN ", "H": None}
+    assert prep.code_value(row, "F") == "TEST-ELEC"
+    assert prep.code_value(row, "G") == "GEN"
+    assert prep.code_value(row, "H") == ""

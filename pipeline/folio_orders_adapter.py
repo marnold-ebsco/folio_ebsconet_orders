@@ -118,7 +118,8 @@ def row_to_line(row, route, cfg):
         line["is_package"] = True
     if _text(row, col.get("po_number")):
         line["vendor_reference_number"] = _text(row, col["po_number"])
-        line["vendor_reference_type"] = folio["po_number_reference_type"]
+        line["vendor_reference_type"] = folio.get(
+            "po_number_reference_type", "Vendor order reference number")
     if _text(row, col.get("open_access")).lower() in ("yes", "true", "1"):
         line["line_tags"] = [folio.get("open_access_tag", "Open Access")]
     if _text(row, col.get("your_access")):
