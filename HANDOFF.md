@@ -109,8 +109,54 @@ tool; inline quoting and heredocs with backticks break.
   numbers in `out/three_type_test/`; check scope before running it. Bugfest has 1000+ POs from
   other vendors: never touch those.
 
-## Next task (not started): composite-orders vs. SOP column audit
-Requested 2026-10-02; do after a session clear. Compare the FOLIO `composite-orders`
+## NEXT (user wants to work on this first; remind them after a session clear): one customer workbook, three worksheets
+Decided 2026-10-02 (recommendation accepted in principle; confirm before coding): replace the
+three `for-customer` files with ONE workbook holding three worksheets (electronic, physical,
+P-E; names from `customer_file_labels`; a type with no lines gets no tab). Rejected: one sheet
+with section headings (mid-sheet heading rows break the row-1 header assumption, column sets
+differ so a union of columns is needed, drop-downs would need row ranges, filter/sort breaks).
+Plan:
+- `prepare_for_customer()` in `pipeline/ebsconet_prep.py`: write one workbook, one sheet per
+  route, each with its own columns, highlight and `customer_validations()` (the writer
+  `write_workbook()` currently makes one sheet; add a multi-sheet variant). Update its report
+  and return value (`files`, `columns`) and `ebsconet.py` output text.
+- Input side of `build`: `read_sop()` reads `worksheets[0]` only; make it read every sheet
+  (`read_sops()` already merges several inputs; `_row` label becomes `file:sheet:row`). Still
+  accept the old three-file form. `check_headers` runs per sheet/headers union as now. Route is
+  re-derived from the Format column, so the tab a row sits on does not matter.
+- Unchanged: `build` still writes three workbooks to `out/`, so the adapter,
+  `folio_setup.accounts_from_workbooks()` (reads `worksheets[0]` of those) and the MARC
+  converter need no change. Do NOT switch them to multi-sheet.
+- Tests: update `tests/` for `prepare_for_customer` (files -> one file, sheets), add a
+  `read_sop` multi-sheet test and a mixed old/new input test; keep flake8 clean
+  (`--max-line-length=100`). Update README/RUNBOOK/CLIENT_GUIDE wording ("three spreadsheets").
+- Combine with the column-drop work below (`drop_columns`) since both touch
+  `prepare_for_customer`.
+
+## Audit DONE 2026-10-02: decisions needed (no code changed)
+Full table: `work/composite_orders_column_audit.md` (git-ignored). Pick from these, then implement:
+1. **Drop at `for-customer` (27 columns, nothing reads them, no FOLIO place):** 11 Order Type,
+   12 Invoice Date, 13 Invoice Number, 18 ILS Number, 19 Publisher Identification, 20
+   Registration ID, 24-31 (Publisher Group Name, 3 countries, Language, Dewey, LC, UDC),
+   37 E-Journal Contacts, 42-53 (Subscriber / Special / Customer). Confirm the list (Invoice
+   Date/Number only if invoices will never be loaded). Implement as a `drop_columns` list in
+   `pipeline/pipeline_config.json`, not hardcoded. `check_headers` needs only Title, ISSN,
+   Format, Order Number, Total Cost; keep Account Number (account step skips a workbook
+   without it).
+2. **Undecided columns (map or drop each):** 7 Term (-> `subscriptionInterval` days), 8
+   Quantity (never sent; >1 loads as 1 at full cost, so map rather than drop), 15 Currency
+   (adapter uses config currency; recommend mapping), 16 Purchase Order Number (e.g.
+   `2026 WRSHN`, has a space so not `poNumber`; PO note or reference number?), 17 Fund Code
+   (hint for the customer's `FOLIO Fund`, else drop), 33-35 Comments 1-3 (PO notes /
+   `receivingNote`?), 38 Open Access (tag?), 40 Your Access (note?).
+3. **Mapping gaps to fix on the API route:** URL -> `eresource.resourceUrl` (loader supports
+   `resource_url`; adapter does not pass it); the prep `Package?` column -> `isPackage`
+   (adapter never reads it); Currency and Quantity as above.
+4. Keep: columns 1-6, 9, 10, 14, 21-23, 32, 36, 39, 41 (pipeline reads them or the customer
+   needs them to fill in org / fund / class).
+
+## Audit task as originally requested (done; kept for reference)
+Requested 2026-10-02. Compare the FOLIO `composite-orders`
 endpoint (mod-orders; schema `composite_purchase_order` / `compositePoLine`, see
 https://dev.folio.org/reference/api/ and the loader's payload in
 `~/scratch/folio_orders`) with the 53 SOP columns in `work/TestEBSCOnet.xlsx` and produce:
