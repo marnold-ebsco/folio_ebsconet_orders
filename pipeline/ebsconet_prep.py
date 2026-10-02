@@ -349,8 +349,7 @@ def enrich(row, route, cfg):
         or cfg["expense_class_by_subject"].get(
             str(row.get(c["subject"]) or "").strip(), cfg["default_expense_class"])
         if cfg["rules"].get("use_expense_classes", True) else "")
-    out[a["org"]] = customer_value(row, a["org"]) or cfg["org_by_publisher"].get(
-        str(row.get(c["publisher"]) or "").strip(), "")
+    out[a["org"]] = customer_value(row, a["org"])
     out[a["order_type"]], out[a["renewal_interval"]] = "", ""
     out[a["order_type"]], out[a["renewal_interval"]], more = order_settings(row, cfg)
     warnings += more

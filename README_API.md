@@ -63,7 +63,7 @@ funds, expense classes, vendor organizations, locations, material types and acqu
 that exist, and asks you to pick (type part of a name to narrow long lists). It also asks the
 payment method for vendor accounts and the ongoing defaults, shows the result, backs up the old
 file as `ebsconet_config.json.bak-<timestamp>`, and writes the new one. Keys it does not ask
-about (e.g. `org_by_publisher`) are kept. Run it before `for-customer` so the customer's
+about (e.g. `expense_class_by_subject`) are kept. Run it before `for-customer` so the customer's
 drop-downs hold real locations and material types.
 
 **If the customer should choose the values:** run `ebsconet-configure --worksheet` (optionally
@@ -82,7 +82,6 @@ when the customer leaves a cell blank; the values in the repository are TEST pla
 |---|---|
 | `fund_by_route` | default fund code for `online` / `print` / `pe` |
 | `expense_class_by_subject`, `default_expense_class` | expense class by SOP subject, and the fallback |
-| `org_by_publisher` | access-provider organization code by publisher (blank otherwise) |
 | `folio.vendor_org_code` | the EBSCONET vendor organization (vendor on every order; receives the account numbers) |
 | `customer_choices` | optional drop-down lists for the customer's `location` and `material_type` columns (empty list = free text) |
 | `rules.exclude_zero_cost`, `rules.exclude_zero_cost_package_members` | drop $0 rows / $0 package members (both default `true`) |
@@ -160,7 +159,7 @@ reorder other columns.
 List whichever filled-in files you have (one or all three; with several, rows are reported as
 `<file>:<row>`). `build` uses the customer's values as they are. A blank cell, or a SOP
 without that column, falls back to the config defaults (`fund_by_route`,
-`expense_class_by_subject` / `default_expense_class`, `org_by_publisher`,
+`expense_class_by_subject` / `default_expense_class`,
 `ongoing.default_order_type` / `ongoing.interval_days`, `folio.location` /
 `folio.physical_material_type`). A wrong order type or a non-numeric interval is replaced by
 the default with a warning in the report; a One-Time order has no interval. `build` exits 1

@@ -18,6 +18,9 @@
     "descriptor": "Descriptor",
     "frequency": "Frequency",
     "term": "Term",
+    "quantity": "Quantity",
+    "currency": "Currency",
+    "po_number": "Purchase Order Number",
     "open_access": "Open Access",
     "your_access": "Your Access",
     "title_number_source": "Publisher Product Code"

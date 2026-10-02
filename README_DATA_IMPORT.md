@@ -59,7 +59,6 @@ customer leaves a cell blank; the values in the repository are TEST placeholders
 |---|---|
 | `fund_by_route` | default fund code for `online` / `print` / `pe` |
 | `expense_class_by_subject`, `default_expense_class` | expense class by SOP subject, and the fallback |
-| `org_by_publisher` | access-provider organization by publisher (blank otherwise) |
 | `customer_choices` | optional drop-down lists for the customer's `location` and `material_type` columns (empty list = free text) |
 | `rules.exclude_zero_cost`, `rules.exclude_zero_cost_package_members` | drop $0 rows / $0 package members (both default `true`) |
 | `rules.exclude_usage_loading_service` | `true` leaves out "Usage Loading Service" lines (default `false`: they load) |
@@ -167,7 +166,7 @@ List whichever filled-in files you have (one or all three; with several, rows ar
 `<file>:<row>`). `build` runs prep and then builds the MARC files. It uses the customer's
 values as they are. A blank cell, or a SOP without that column, falls back to the config
 defaults (`fund_by_route`, `expense_class_by_subject` / `default_expense_class`,
-`org_by_publisher`, `ongoing.default_order_type` / `ongoing.interval_days`,
+`ongoing.default_order_type` / `ongoing.interval_days`,
 `folio.location` / `folio.physical_material_type`). A wrong order type or a non-numeric
 interval is replaced by the default with a warning in the report; a One-Time order has no
 interval. `build` exits 1 if it finds a problem. Outputs:

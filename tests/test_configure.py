@@ -47,7 +47,7 @@ def test_filter_narrows_long_list():
 def test_main_writes_config(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     base = json.loads((ROOT / "ebsconet_config.json").read_text())
-    base["org_by_publisher"] = {"Wiley": "WILEY"}
+    base["custom_key"] = {"Wiley": "WILEY"}
     base["expense_class_by_subject"] = {"Old": "OLD"}
     (tmp_path / "ebsconet_config.json").write_text(json.dumps(base))
     (tmp_path / "t.ini").write_text("okapiUrl=x\n")
@@ -78,7 +78,7 @@ def test_main_writes_config(tmp_path, monkeypatch):
     assert out["folio"]["account_payment_method"] == "Deposit Account"
     assert out["ongoing"] == {**base["ongoing"], "default_order_type": "One-Time",
                               "interval_days": 180}
-    assert out["org_by_publisher"] == {"Wiley": "WILEY"}
+    assert out["custom_key"] == {"Wiley": "WILEY"}
     assert list(tmp_path.glob("ebsconet_config.json.bak-*"))
 
 

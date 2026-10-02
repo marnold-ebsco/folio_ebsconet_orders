@@ -7,6 +7,7 @@ sheets (`LIST_SHEETS`). `read_overrides` turns the filled-in sheet back into the
 keys it answers, so `ebsconet build` can use them.
 """
 import re
+from pathlib import Path
 
 from openpyxl import load_workbook
 from openpyxl.styles import Alignment, Font, PatternFill
@@ -163,7 +164,8 @@ def _subjects(text):
 
 def read_overrides(path):
     """Answers on the Defaults sheet as config keys ({} if the file has no such sheet or
-    nothing is answered). Blank answers are left out so the config default stays."""
+    nothing is answered). Blank answers are left out so the config default stays, except
+    the required EBSCOnet organization: a Defaults sheet without it raises ValueError."""
     wb = load_workbook(path, read_only=True, data_only=True)
     try:
         if SETTINGS_SHEET not in wb.sheetnames:
@@ -174,6 +176,9 @@ def read_overrides(path):
                 answers[str(row[0]).strip()] = str(row[3]).strip()
     finally:
         wb.close()
+    if REQUIRED_SETTING not in answers:
+        raise ValueError("%s: the %r setting on the %s sheet is required but blank"
+                         % (Path(path).name, REQUIRED_SETTING, SETTINGS_SHEET))
     out = {}
 
     def put(path_, value):

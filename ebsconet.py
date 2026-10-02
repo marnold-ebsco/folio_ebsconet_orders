@@ -58,7 +58,10 @@ def cmd_for_customer(args, cfg):
 
 def cmd_build(args, cfg):
     for path in args.input:
-        answered = customer_settings.read_overrides(path)
+        try:
+            answered = customer_settings.read_overrides(path)
+        except ValueError as err:
+            raise SystemExit("ERROR: %s" % err)
         if answered:
             cfg.update(prep.merge(cfg, answered))
             print("%s: applied the library's answers from the %s sheet (for this run only; "

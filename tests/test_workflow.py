@@ -383,7 +383,8 @@ def test_answers_on_the_defaults_sheet_become_config_overrides(cfg, tmp_path):
 def test_blank_defaults_sheet_overrides_nothing(cfg, tmp_path):
     from pipeline import customer_settings as cs
     path, _ = _filled_workbook(cfg, tmp_path)
-    assert cs.read_overrides(path) == {}
+    with pytest.raises(ValueError, match="required but blank"):
+        cs.read_overrides(path)
 
 
 def test_build_combines_the_three_files_and_writes_order_settings(cfg, tmp_path):

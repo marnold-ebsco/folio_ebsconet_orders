@@ -6,8 +6,11 @@ order numbers become extra lines of one PO. Vendor accounts are added first and 
 to logs/accounts_<timestamp>.txt.
 """
 import argparse
+import csv
 import re
+from collections import Counter
 from datetime import datetime
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 from pipeline.ebsconet_prep import blank, load_config
@@ -29,6 +32,31 @@ def location_code(text):
 
 def _text(row, column):
     return fmt_value(row.get(column)) if column else ""
+
+
+def _currency(row, col, cfg):
+    """The row's 3-letter Currency, else the configured currency."""
+    code = _text(row, col.get("currency")).upper()
+    return code if re.fullmatch(r"[A-Z]{3}", code) else cfg["folio"]["currency"]
+
+
+def _quantity_and_cost(row, col):
+    """(copies, unit cost text) from Quantity and Total Cost.
+
+    The SOP cost is the line total. Quantity above 1 splits it into equal unit prices
+    only when that reproduces the total to the cent; otherwise 1 copy at the full cost.
+    """
+    cost = _text(row, col["cost"]).replace(",", "")
+    try:
+        copies = int(float(_text(row, col.get("quantity")) or 1))
+        total = Decimal(cost)
+    except (ValueError, InvalidOperation):
+        return 1, cost
+    if copies > 1:
+        unit = (total / copies).quantize(Decimal("0.01"))
+        if unit * copies == total:
+            return copies, str(unit)
+    return 1, cost
 
 
 def row_to_line(row, route, cfg):
@@ -53,14 +81,18 @@ def row_to_line(row, route, cfg):
             "type": _text(row, add["title_number_type"]) or folio["title_number_type"],
             "value": _text(row, add["title_number"])})
 
+    copies, cost = _quantity_and_cost(row, col)
     line = {
         "po_number": _text(row, col["order_number"]),
         "vendor_code": cfg["folio"]["vendor_org_code"],
         "title": _text(row, col["title"]),
         "order_format": ROUTE_FORMAT[route],
-        "cost": _text(row, col["cost"]).replace(",", ""),
-        "currency": folio["currency"],
+        "cost": cost,
+        "currency": _currency(row, col, cfg),
         "fund_code": _text(row, add["fund"]),
+        # Disabled for now: use the SOP "Fund Code" when FOLIO Fund is blank. To enable,
+        # add "fund_code": "Fund Code" to columns in pipeline_config.json and swap the line:
+        # "fund_code": _text(row, add["fund"]) or _text(row, col.get("fund_code")),
         "expense_class_code": expense,
         "order_type": order_type,
         "acquisition_method": folio["acquisition_method"],
@@ -75,6 +107,18 @@ def row_to_line(row, route, cfg):
     }
     if route != "print" and access_provider:
         line["access_provider_code"] = access_provider
+    if copies > 1:
+        if route != "online":
+            line["quantity_physical"] = copies
+        if route != "print":
+            line["quantity_electronic"] = copies
+    if route != "print" and _text(row, col.get("url")):
+        line["resource_url"] = _text(row, col["url"])
+    if _text(row, add["package_flag"]).lower() in ("yes", "true", "1"):
+        line["is_package"] = True
+    if _text(row, col.get("po_number")):
+        line["vendor_reference_number"] = _text(row, col["po_number"])
+        line["vendor_reference_type"] = folio["po_number_reference_type"]
     if _text(row, col.get("open_access")).lower() in ("yes", "true", "1"):
         line["line_tags"] = [folio.get("open_access_tag", "Open Access")]
     if _text(row, col.get("your_access")):
@@ -180,6 +224,41 @@ def write_accounts_log(folder, started, ended, live, ini, workbooks, report):
     return path
 
 
+def write_load_log(folder, started, ended, live, ini, workbooks, line_count, results):
+    """Write logs/load_<start>.txt and load_<start>.csv; returns the .txt path.
+
+    results is the loader's [(po_number, status, detail)]. The text file has the run
+    info, totals by status and every PO that is not ok; the CSV lists every PO.
+    """
+    stem = Path(folder) / ("load_%s" % started.strftime("%Y%m%d_%H%M%S"))
+    stem.parent.mkdir(parents=True, exist_ok=True)
+    totals = Counter(status for _, status, _ in results)
+    out = [
+        "Load log",
+        "Mode:      %s" % ("LIVE (orders were created in FOLIO)" if live
+                           else "DRY RUN (nothing was changed in FOLIO)"),
+        "Tenant ini: %s" % Path(ini).name,
+        "Workbooks: %s" % workbooks,
+        "Started:   %s" % started.strftime(STAMP),
+        "Ended:     %s" % ended.strftime(STAMP),
+        "Elapsed:   %s" % format_elapsed((ended - started).total_seconds()),
+        "",
+        "Lines: %d; POs: %d" % (line_count, len(results)),
+    ]
+    out += ["  %s: %d" % (status, n) for status, n in sorted(totals.items())]
+    bad = [r for r in results if r[1] in BAD_STATUS]
+    out += ["", "%d PO(s) need attention" % len(bad) if bad else "No PO needs attention"]
+    out += ["  %s  %s  %s" % r for r in bad]
+    out += ["", "All POs: %s" % stem.with_suffix(".csv").name]
+    txt = stem.with_suffix(".txt")
+    txt.write_text("\n".join(out) + "\n", encoding="utf-8")
+    with open(stem.with_suffix(".csv"), "w", newline="", encoding="utf-8") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["po_number", "status", "detail"])
+        writer.writerows(results)
+    return txt
+
+
 def load_orders(in_dir, ini, cfg, live, skip_accounts=False):
     """Add vendor accounts, then create the POs through the Orders API.
 
@@ -206,7 +285,12 @@ def load_orders(in_dir, ini, cfg, live, skip_accounts=False):
         log = write_accounts_log(Path(in_dir) / "logs", started, datetime.now(), live,
                                  ini, in_dir, report)
         print("accounts log: %s" % log)
-    return load(client, lines, live=live, check_budget=True)
+    started = datetime.now()
+    results = load(client, lines, live=live, check_budget=True)
+    log = write_load_log(Path(in_dir) / "logs", started, datetime.now(), live, ini,
+                         in_dir, len(lines), results)
+    print("load log: %s" % log)
+    return results
 
 
 def main(argv=None):

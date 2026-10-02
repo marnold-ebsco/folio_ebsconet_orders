@@ -137,3 +137,44 @@ def test_blank_access_provider_stays_blank_and_print_has_none():
     line = row_to_line(dict(blank, **{"FOLIO Order Type": "One-Time"}), "print", CFG)
     assert "access_provider_code" not in line
     assert line["vendor_code"] == CFG["folio"]["vendor_org_code"]
+
+
+def test_quantity_splits_total_into_unit_prices_only_when_exact():
+    line = row_to_line(dict(ROW, Quantity=3, **{"Total Cost": 30}), "online", CFG)
+    assert line["cost"] == "10.00" and line["quantity_electronic"] == 3
+    line = row_to_line(dict(ROW, Quantity=3, **{"Total Cost": 10}), "print", CFG)
+    assert line["cost"] == "10" and "quantity_physical" not in line
+
+
+def test_currency_row_value_or_config_fallback():
+    assert row_to_line(dict(ROW, Currency="gbp"), "online", CFG)["currency"] == "GBP"
+    assert row_to_line(dict(ROW, Currency="?"), "online", CFG)["currency"] == "USD"
+
+
+def test_url_package_and_po_number_mappings():
+    row = dict(ROW, URL="https://x.org", **{"Package?": "Yes",
+                                            "Purchase Order Number": "2026 WRSHN"})
+    line = row_to_line(row, "online", CFG)
+    assert line["resource_url"] == "https://x.org" and line["is_package"] is True
+    assert line["vendor_reference_number"] == "2026 WRSHN"
+    assert line["vendor_reference_type"] == "Vendor order reference number"
+    assert "resource_url" not in row_to_line(row, "print", CFG)
+
+
+def test_load_log_has_totals_problems_and_csv(tmp_path):
+    from datetime import datetime, timedelta
+    from pipeline.folio_orders_adapter import write_load_log
+    start = datetime(2026, 10, 2, 9, 0, 0)
+    results = [("A1", "dry-run", ""), ("A2", "invalid", "no Active budget"),
+               ("A3", "dry-run", "")]
+    txt = write_load_log(tmp_path / "logs", start, start + timedelta(seconds=75), False,
+                         "/x/t.ini", "out", 5, results)
+    text = txt.read_text()
+    assert txt.name == "load_20261002_090000.txt"
+    assert "DRY RUN" in text and "Elapsed:   0:01:15" in text and "t.ini" in text
+    assert "Lines: 5; POs: 3" in text and "  dry-run: 2" in text and "  invalid: 1" in text
+    assert "1 PO(s) need attention" in text and "A2  invalid  no Active budget" in text
+    rows = txt.with_suffix(".csv").read_text().splitlines()
+    assert rows[0] == "po_number,status,detail" and len(rows) == 4
+    ok = write_load_log(tmp_path, start, start, True, "t.ini", "out", 1, [("B", "created", "")])
+    assert "No PO needs attention" in ok.read_text()

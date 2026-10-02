@@ -1,4 +1,4 @@
-# Handoff: EBSCOnet orders pipeline (updated 2026-10-02, first EC2 run, ebsconet-configure added)
+# Handoff: EBSCOnet orders pipeline (updated 2026-10-02, all code decisions closed; next = EC2 / real-tenant test, then README rework)
 
 Read this for the EBSCOnet / `folio_ebsconet_orders` work (three customer spreadsheets, the
 `ebsconet.py` workflow, the adapter). For the API loader package itself
@@ -135,7 +135,7 @@ Month(s)", 10 blank (the appended books -> One-Time, verified). Customer columns
 their headers. Docs updated (README_API/DATA_IMPORT, RUNBOOK, CLIENT_GUIDE). 213 tests, flake8 clean.
 Audit item 2 "7 Term" is therefore settled (used for type + interval, no separate mapping needed).
 
-## DONE 2026-10-02: column drops and two new mappings (uncommitted)
+## DONE 2026-10-02: column drops and two new mappings
 - `drop_columns.names` in `pipeline_config.json` (30 columns): the 27 audit columns (Order Type,
   Invoice Date/Number, ILS Number, Publisher Identification, Registration ID, Publisher Group
   Name + 3 countries, Language, Dewey, LC, UDC, E-Journal Contacts, 12 Subscriber/Special/
@@ -155,24 +155,39 @@ first row, **"Default EBSCOnet organization"**, marked REQUIRED (bold red name);
 `ebsconet-configure` it is a required pick. The customer column `FOLIO Org` is renamed
 **`FOLIO Access Provider`** (config key `added_columns.org` unchanged) and goes to the loader's
 `access_provider_code` on electronic and P-E lines only. Access provider is optional: a blank
-cell stays blank (`default_org` and its Defaults question were removed; `org_by_publisher` can
-still fill it from the publisher). `ensure_accounts` adds accounts to the vendor org only. The MARC
+cell stays blank (`default_org` and its Defaults question were removed; `org_by_publisher` was
+removed 2026-10-02, so a blank always stays blank). `ensure_accounts` adds accounts to the vendor org only. The MARC
 route was already right (`990$v`). Old customer files with a `FOLIO Org` header are not read. Not
 tried on a tenant. A blank Defaults answer for the EBSCOnet org keeps the config value (no hard
 error yet). 217 tests, flake8 clean.
 
-## DECISIONS STILL TO BE MADE (as of 2026-10-02)
-1. **`org_by_publisher`:** it can still fill a blank `FOLIO Access Provider` from the SOP publisher
-   name (empty by default). Keep it, or remove it so every blank stays blank with no exceptions?
-2. **Required EBSCOnet org:** "Default EBSCOnet organization" is only labelled REQUIRED. A blank
-   Defaults answer keeps the config value (`ebsconet`). Make a blank answer an error in
-   `build` / `--from-worksheet`?
-3. **Audit item 2 / 3 mappings** (columns kept in the workbook, no FOLIO mapping yet): Quantity
-   (>1 loads as 1 at full cost), Currency (adapter uses config currency), Purchase Order Number
-   (has a space, so not `poNumber`: PO note or reference number?), Fund Code (hint for
-   `FOLIO Fund`, or leave), URL -> `eresource.resourceUrl` (loader supports `resource_url`),
-   prep `Package?` -> `isPackage`.
-4. **Whole-run summary log** for `load` (only the account step is logged now): build it or not?
+## NEXT STEPS, in order
+1. You: EC2 / real-tenant test (item 5 below). Nothing in the 2026-10-02 work (mappings, required org, load log, Open Access / Your Access) has run on a tenant yet.
+2. Fix whatever that run finds.
+3. The README rework below.
+
+## TASK (after all other work is done): rework all of the READMEs
+Rewrite `README.md` (index), `README_API.md`, `README_DATA_IMPORT.md`, `RUNBOOK.md`, `PLAN.md`
+and `docs/CLIENT_GUIDE.md` together once the code settles. Known gaps to fold in: the one customer
+workbook with its Defaults sheet, `ebsconet-configure` (+ `--worksheet`, `--from-worksheet`), the
+EC2 installer layout (`~/ebsconet/{app,venv,work}`) and `work/` folder, `FOLIO Access Provider`
+and the required EBSCOnet org, the Term-based order type and interval, the `drop_columns` list, and
+the new mappings (URL, `Package?`, Currency, Quantity, Purchase Order Number, Open Access, Your
+Access); Fund Code mapping is written but commented out in `row_to_line`. Also
+remove the repo-root-vs-`work/` command mismatch and the unrewritten MARC-only rows in RUNBOOK
+section D.
+
+## Decisions of 2026-10-02 (ALL CLOSED; only item 5 is still open)
+1. ~~`org_by_publisher`~~ **DECIDED 2026-10-02: removed** (code, config, docs, tests).
+2. ~~Required EBSCOnet org~~ **DONE 2026-10-02:** a Defaults sheet with a blank "Default EBSCOnet organization" now stops `build` and `--from-worksheet` with an error (`read_overrides` raises ValueError). Old separate files with no Defaults sheet still use the config value.
+3. **Audit item 2 / 3 mappings: DONE 2026-10-02 (not tried on a tenant).** Adapter
+   `row_to_line`: URL -> `resource_url` (electronic and P-E only); `Package?` Yes -> `is_package`;
+   Currency -> per-row 3-letter code, else `folio.currency`; Quantity > 1 -> that many copies with
+   unit price = cost / quantity, only when it reproduces the total to the cent, else 1 copy at the
+   full cost; Purchase Order Number -> line reference number of type
+   `folio.po_number_reference_type` ("Vendor order reference number"). Fund Code deliberately NOT
+   active (vendor code, not a FOLIO fund; the customer picks `FOLIO Fund`). A fallback to it when `FOLIO Fund` is blank is written but commented out in `row_to_line`. 221 tests.
+4. ~~Whole-run summary log~~ **DONE 2026-10-02:** `load_orders` writes `<out>/logs/load_<timestamp>.txt` (mode, ini, timing, totals by status, every PO needing attention) and a matching `.csv` of all POs, next to the accounts log.
 5. **Real-tenant test / EC2:** you run it; re-run `install.sh` first, then `ebsconet-configure`
    (or `--worksheet`), `for-customer`, send files, `build` / `load` dry run.
 

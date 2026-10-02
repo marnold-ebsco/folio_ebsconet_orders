@@ -4,7 +4,7 @@ Run it (as `ebsconet-configure`) from the work/ folder. It connects with a tenan
 lists the funds, expense classes, vendor organizations, locations, material types and
 acquisition methods that really exist, and asks you to pick the ones this library uses.
 Read-only against FOLIO. Your existing ebsconet_config.json is backed up before the new
-one is written; keys the wizard does not ask about (for example org_by_publisher) are kept.
+one is written; keys the wizard does not ask about (for example expense_class_by_subject) are kept.
 """
 import argparse
 import copy
@@ -278,7 +278,10 @@ def main(argv=None, read=input, connect_fn=connect):
     print("Starting from %s" % source)
 
     if args.from_worksheet:
-        answers = customer_settings.read_overrides(args.from_worksheet)
+        try:
+            answers = customer_settings.read_overrides(args.from_worksheet)
+        except ValueError as err:
+            raise SystemExit("ERROR: %s" % err)
         if not answers:
             raise SystemExit("No answers found on a %s sheet in %s."
                              % (customer_settings.SETTINGS_SHEET, args.from_worksheet))
