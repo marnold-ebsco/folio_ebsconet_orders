@@ -161,6 +161,21 @@ route was already right (`990$v`). Old customer files with a `FOLIO Org` header 
 tried on a tenant. A blank Defaults answer for the EBSCOnet org keeps the config value (no hard
 error yet). 217 tests, flake8 clean.
 
+## DECISIONS STILL TO BE MADE (as of 2026-10-02)
+1. **`org_by_publisher`:** it can still fill a blank `FOLIO Access Provider` from the SOP publisher
+   name (empty by default). Keep it, or remove it so every blank stays blank with no exceptions?
+2. **Required EBSCOnet org:** "Default EBSCOnet organization" is only labelled REQUIRED. A blank
+   Defaults answer keeps the config value (`ebsconet`). Make a blank answer an error in
+   `build` / `--from-worksheet`?
+3. **Audit item 2 / 3 mappings** (columns kept in the workbook, no FOLIO mapping yet): Quantity
+   (>1 loads as 1 at full cost), Currency (adapter uses config currency), Purchase Order Number
+   (has a space, so not `poNumber`: PO note or reference number?), Fund Code (hint for
+   `FOLIO Fund`, or leave), URL -> `eresource.resourceUrl` (loader supports `resource_url`),
+   prep `Package?` -> `isPackage`.
+4. **Whole-run summary log** for `load` (only the account step is logged now): build it or not?
+5. **Real-tenant test / EC2:** you run it; re-run `install.sh` first, then `ebsconet-configure`
+   (or `--worksheet`), `for-customer`, send files, `build` / `load` dry run.
+
 ## Audit DONE 2026-10-02: decisions needed (no code changed)
 Full table: `work/composite_orders_column_audit.md` (git-ignored). Pick from these, then implement:
 1. **Drop at `for-customer` (27 columns, nothing reads them, no FOLIO place):** 11 Order Type,
