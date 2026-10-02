@@ -112,3 +112,14 @@ def test_expense_class_passes_through_when_enabled():
 def test_no_expense_class_when_disabled():
     cfg = {**CFG, "rules": {**CFG["rules"], "use_expense_classes": False}}
     assert not row_to_line(ROW, "online", cfg)["expense_class_code"]
+
+
+def test_open_access_becomes_a_tag_and_your_access_a_receiving_note():
+    line = row_to_line(dict(ROW, **{"Open Access": "Yes",
+                                    "Your Access": "All content from 01/01/1997 to present"}),
+                       "online", CFG)
+    assert line["line_tags"] == ["Open Access"]
+    assert line["receiving_note"] == "All content from 01/01/1997 to present"
+    line = row_to_line(dict(ROW, **{"Open Access": "No", "Your Access": None}),
+                       "online", CFG)
+    assert "line_tags" not in line and "receiving_note" not in line

@@ -135,8 +135,37 @@ Month(s)", 10 blank (the appended books -> One-Time, verified). Customer columns
 their headers. Docs updated (README_API/DATA_IMPORT, RUNBOOK, CLIENT_GUIDE). 213 tests, flake8 clean.
 Audit item 2 "7 Term" is therefore settled (used for type + interval, no separate mapping needed).
 
-## NEXT: column drops (`drop_columns`), after the user picks from the audit below
-Implement in `prepare_for_customer` as a `drop_columns` list in `pipeline_config.json`.
+## DONE 2026-10-02: column drops and two new mappings (uncommitted)
+- `drop_columns.names` in `pipeline_config.json` (30 columns): the 27 audit columns (Order Type,
+  Invoice Date/Number, ILS Number, Publisher Identification, Registration ID, Publisher Group
+  Name + 3 countries, Language, Dewey, LC, UDC, E-Journal Contacts, 12 Subscriber/Special/
+  Customer) plus Comment 1-3 (test file: only a split, truncated email, `TIER 2`, `T4R`).
+  `prepare_for_customer` removes them from the headers; required columns and Account Number
+  are never dropped. The report notes the count.
+- Adapter: `Open Access` = Yes -> line tag `Open Access` (`folio.open_access_tag` overrides);
+  `Your Access` -> `details.receivingNote` (`receiving_note`). `columns.open_access` /
+  `columns.your_access` in `pipeline_config.json`. Not tried on a tenant.
+- User decided: KEEP Term (7), Quantity (8), Currency (15), Purchase Order Number (16), Fund
+  Code (17). Quantity, Currency, PO Number and Fund Code are kept in the workbook but their
+  FOLIO mapping is NOT built yet (see audit items 2-3 below). 215 tests, flake8 clean.
+
+## NEXT (proposed 2026-10-02, awaiting user go-ahead): vendor vs access provider
+`EBSCOnetInstructions.txt` (repo root) says the PO **vendor is always EBSCO/EBSCONET**; the
+`FOLIO Org` column holds the matching org per *publisher* and feeds `990$v` = the **access
+provider** (electronic / P-E only), "ultimately optional". Vendor account numbers (`990$n`)
+belong to the EBSCONET org (step 8). The API adapter does NOT match this:
+`row_to_line` (`pipeline/folio_orders_adapter.py:42`) puts `FOLIO Org` into `vendor_code`, so a
+publisher the customer fills in becomes the PO vendor and `ensure_accounts` adds the account to
+that publisher. Proposed fix:
+- `vendor_code` = always the EBSCONET org (`default_org` / a vendor setting on Defaults).
+- `FOLIO Org` -> `access_provider_code` (loader supports it; electronic and P-E lines only;
+  blank falls back to the vendor in the loader builder).
+- `ensure_accounts` adds accounts to the EBSCONET org only.
+- Rename the column (e.g. `FOLIO Access Provider (Org)`) so customers do not read it as the
+  vendor; update `added_columns`, `customer_columns`, `customer_settings` wording
+  ("Default vendor organization"), `org_by_publisher` handling in `ebsconet_prep.py:353`
+  (check it too), `bin/ebsconet_configure.py`, README_API/DATA_IMPORT, tests.
+- Check the MARC route (`990$v`) for the same confusion.
 
 ## Audit DONE 2026-10-02: decisions needed (no code changed)
 Full table: `work/composite_orders_column_audit.md` (git-ignored). Pick from these, then implement:
@@ -229,3 +258,6 @@ three invoices (6403815 x4, 7150264 x3, 5927381 x3). Good for testing the no-dat
 - Commands time out at about 2 minutes; run long loads in the background.
 - This file replaces `HANDOFF_ebsconet_three_spreadsheets.md` that lived in the (non-git)
   `ClaudeSessions` folder.
+
+Option-list sheets are now named with a `--` prefix (`--Funds`, `--PaymentMethods`, ...;
+`customer_settings.LIST_PREFIX`); `read_sop` skips them and formulas quote the name. 215 tests.

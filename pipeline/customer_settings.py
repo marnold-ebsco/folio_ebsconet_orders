@@ -17,6 +17,7 @@ PAYMENT_METHODS = ["Cash", "Credit Card", "EFT", "Deposit Account", "Physical Ch
                    "Bank Draft", "Lockbox", "Other"]
 LIST_SHEETS = ("Funds", "ExpenseClasses", "Organizations", "Locations", "MaterialTypes",
                "AcquisitionMethods", "PaymentMethods", "OrderTypes", "YesNo")
+LIST_PREFIX = "--"      # marks sheets that only feed drop-downs, not sheets to fill in
 YELLOW = PatternFill("solid", fgColor="FFFFCC")
 
 
@@ -68,7 +69,7 @@ def tenant_lists(client=None):
 def list_range(name, lists):
     """Formula for a drop-down over list sheet `name`, or None if that list is empty."""
     count = len(lists.get(name) or [])
-    return "=%s!$A$2:$A$%d" % (name, count + 1) if count else None
+    return "='%s%s'!$A$2:$A$%d" % (LIST_PREFIX, name, count + 1) if count else None
 
 
 def settings_rows(cfg):
@@ -119,7 +120,7 @@ def add_settings_sheets(wb, cfg, lists, first=True):
         cell.font = Font(bold=True)
     for name in LIST_SHEETS:
         if lists.get(name):
-            sheet = wb.create_sheet(name)
+            sheet = wb.create_sheet(LIST_PREFIX + name)
             sheet.append([name])
             sheet["A1"].font = Font(bold=True)
             for item in lists[name]:

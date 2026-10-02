@@ -127,7 +127,7 @@ ONE workbook, `out/customer/<name>_for_customer.xlsx`, with these sheets in orde
    `ebsconet-configure --worksheet`.
 2. **electronic**, **physical**, **P-E**: the lines of each type (a type with no lines gets no
    sheet) with its own customer columns.
-3. The option lists the Defaults drop-downs use (`Funds`, `Locations`, ...), at the end.
+3. The option lists the Defaults drop-downs use (`--Funds`, `--Locations`, ...; the `--` prefix marks sheets that only feed drop-downs), at the end.
 
 Add `--ini <tenant>.ini` to fill the Defaults drop-downs, and the location and material-type
 drop-downs on the data sheets, with the tenant's real options (otherwise they are free text

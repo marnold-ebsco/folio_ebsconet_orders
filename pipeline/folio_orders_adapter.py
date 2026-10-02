@@ -73,6 +73,10 @@ def row_to_line(row, route, cfg):
         "cancellation_restriction": _text(
             row, add["cancellation_restriction"]).lower() in ("yes", "true", "1"),
     }
+    if _text(row, col.get("open_access")).lower() in ("yes", "true", "1"):
+        line["line_tags"] = [folio.get("open_access_tag", "Open Access")]
+    if _text(row, col.get("your_access")):
+        line["receiving_note"] = _text(row, col["your_access"])
     if _text(row, col["account"]):
         line["vendor_account"] = _text(row, col["account"])
     if order_type == "Ongoing":

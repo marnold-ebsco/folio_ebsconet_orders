@@ -104,8 +104,8 @@ def test_worksheet(tmp_path, monkeypatch):
     assert wb.sheetnames[0] == "Defaults"
     assert [c.value for c in ws[1]] == ["Setting", "What it is", "Current default", "Your answer"]
     assert ws.max_row == 15
-    assert [r[0] for r in wb["Funds"].iter_rows(values_only=True)] == [
+    assert [r[0] for r in wb["--Funds"].iter_rows(values_only=True)] == [
         "Funds", "ELEC - Electronic", "PRINT - Print"]
-    assert [r[0] for r in wb["Organizations"].iter_rows(values_only=True)] == [
+    assert [r[0] for r in wb["--Organizations"].iter_rows(values_only=True)] == [
         "Organizations", "EBSCO - EBSCO"]
     assert len(ws.data_validations.dataValidation) > 5

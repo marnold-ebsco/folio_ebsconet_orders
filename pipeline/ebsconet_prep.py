@@ -56,8 +56,10 @@ def read_sop(path, all_sheets=False):
     "<sheet>:<row>"."""
     wb = load_workbook(path, read_only=True, data_only=True)
     skip = {customer_settings.SETTINGS_SHEET, *customer_settings.LIST_SHEETS}
-    sheets = ([ws for ws in wb.worksheets if ws.title not in skip] if all_sheets
-              else wb.worksheets[:1])
+    prefix = customer_settings.LIST_PREFIX
+    sheets = ([ws for ws in wb.worksheets
+               if ws.title not in skip and not ws.title.startswith(prefix)]
+              if all_sheets else wb.worksheets[:1])
     headers, rows, labelled = [], [], False
     for ws in sheets:
         it = ws.iter_rows(values_only=True)
@@ -581,6 +583,11 @@ def prepare_for_customer(input_path, out_dir, cfg, lists=None):
     lists = lists if lists is not None else customer_settings.tenant_lists()
     headers, rows = read_sop(input_path)
     check_headers(headers, cfg)
+    dropped = set(cfg.get("drop_columns", {}).get("names", []))
+    needed = {c[k] for k in REQUIRED_COLUMNS} | {c["account"]}
+    dropped -= needed
+    dropped &= set(headers)
+    headers = [h for h in headers if h not in dropped]
 
     kept = {r: [] for r in ROUTES}
     removed, unrouted = [], []
@@ -641,6 +648,7 @@ def prepare_for_customer(input_path, out_dir, cfg, lists=None):
                  "%s_zero_dollar_removed.csv" % stem),
               "Lines not sent (Fee or unrecognized format): %d; listed in %s"
               % (len(unrouted), "%s_not_sent.csv" % stem),
+              "Columns dropped from the SOP (drop_columns): %d" % len(dropped),
               "Workbook: %s; first sheet %s (setup questions)" % (
                   target.name, customer_settings.SETTINGS_SHEET)]
     for route in ROUTES:

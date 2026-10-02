@@ -253,7 +253,7 @@ def test_every_stage_has_a_subcommand():
         assert name in parser.format_help()
 
 
-SPLIT_HEADERS = HEADERS + ["Order Type"]      # the SOP's own (ignored) Order Type column
+SPLIT_HEADERS = HEADERS + ["Order Type"]      # the SOP's own Order Type column (dropped)
 SPLIT_ROWS = [
     {"Title Name": "E1", "Format": "Online Only", "Order Number": "E1", "Total Cost": 10},
     {"Title Name": "E2", "Format": "Database", "Order Number": "E2", "Total Cost": 10},
@@ -275,7 +275,7 @@ def test_stage1_writes_one_spreadsheet_per_type_with_its_own_columns(cfg, tmp_pa
     wb = load_workbook(s["file"])
     assert wb.sheetnames[:4] == ["Defaults", "electronic", "physical", "P-E"]
     added = {r: wb[name][1] for r, name in s["sheets"].items()}
-    added = {r: [c.value for c in row][len(SPLIT_HEADERS):] for r, row in added.items()}
+    added = {r: [c.value for c in row][len(HEADERS):] for r, row in added.items()}
     assert added["online"] == ["FOLIO Org", "FOLIO Fund", "FOLIO Expense Class",
                                "FOLIO Order Type", "FOLIO Renewal Interval (Days)"]
     assert added["pe"] == added["online"] + ["FOLIO Location", "FOLIO Material Type"]
@@ -325,11 +325,11 @@ def test_stage1_defaults_sheet_uses_tenant_lists_for_drop_downs(cfg, tmp_path):
     make_sop(src, SPLIT_ROWS, SPLIT_HEADERS)
     s = cli.prepare_for_customer(src, tmp_path / "out", cfg, lists)
     wb = load_workbook(s["file"])
-    assert "Funds" in wb.sheetnames and "Locations" in wb.sheetnames
+    assert "--Funds" in wb.sheetnames and "--Locations" in wb.sheetnames
     forms = [dv.formula1 for dv in wb["Defaults"].data_validations.dataValidation]
-    assert "=Funds!$A$2:$A$3" in forms
+    assert "='--Funds'!$A$2:$A$3" in forms
     loc = [dv.formula1 for dv in wb["physical"].data_validations.dataValidation]
-    assert "=Locations!$A$2:$A$3" in loc
+    assert "='--Locations'!$A$2:$A$3" in loc
     assert "MaterialTypes" not in wb.sheetnames          # empty list: no sheet, free text
 
 
@@ -485,3 +485,16 @@ def test_for_customer_prefills_type_and_interval_from_term(cfg, tmp_path):
            for r in ws.iter_rows(min_row=2)}
     assert got == {"A": ("Ongoing", 365), "B": ("Ongoing", 456), "C": ("One-Time", None),
                    "D": ("One-Time", None), "E": ("Ongoing", 365)}
+
+
+def test_stage1_drops_configured_columns_but_never_required_ones(cfg, tmp_path):
+    headers = HEADERS + ["Invoice Number", "Subscriber Name", "Account Number"]
+    src = tmp_path / "SOP.xlsx"
+    make_sop(src, [dict(ROWS[0], **{"Invoice Number": "1", "Account Number": "A1"})],
+             headers)
+    cfg["drop_columns"]["names"] += ["Title Name", "Account Number"]    # protected
+    s = cli.prepare_for_customer(src, tmp_path / "out", cfg)
+    ws = load_workbook(s["file"])[s["sheets"]["online"]]
+    names = [c.value for c in ws[1]]
+    assert "Invoice Number" not in names and "Subscriber Name" not in names
+    assert "Title Name" in names and "Account Number" in names

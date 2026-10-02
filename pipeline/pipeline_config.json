@@ -18,6 +18,8 @@
     "descriptor": "Descriptor",
     "frequency": "Frequency",
     "term": "Term",
+    "open_access": "Open Access",
+    "your_access": "Your Access",
     "title_number_source": "Publisher Product Code"
   },
   "added_columns": {
@@ -34,6 +36,10 @@
     "renewal_interval": "FOLIO Renewal Interval (Days)",
     "location": "FOLIO Location",
     "material_type": "FOLIO Material Type"
+  },
+  "drop_columns": {
+    "_comment": "SOP columns removed from the customer workbook by for-customer; nothing downstream reads them and FOLIO has no place for them.",
+    "names": ["Order Type", "Invoice Date", "Invoice Number", "ILS Number", "Publisher Identification", "Registration ID", "Publisher Group Name", "Publisher Country", "Publisher Dispatch Country", "Country of Origin", "Language", "Dewey Decimal Code", "Library of Congress Classification", "Universal Decimal Classification", "E-Journal Contacts", "Subscriber Code", "Subscriber Name", "Subscriber Address", "Subscriber City", "Subscriber State", "Subscriber Country", "Subscriber Postal Code", "Special Department", "Special Name", "Customer Name", "Customer Address", "Customer Postal Code", "Comment 1", "Comment 2", "Comment 3"]
   },
   "customer_columns": {
     "_comment": "Columns the customer fills in, per spreadsheet. Keys of added_columns.",
