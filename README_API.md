@@ -56,6 +56,15 @@ test and lint tools. Run everything from the repository folder with the venv:
 A filled-in .ini holds live credentials: never commit or share it (`*.ini` is git-ignored
 except `sample.ini`). Pass it to every FOLIO command with `--ini my_tenant.ini`.
 
+**Easiest way to fill it in:** on an installed server run `ebsconet-configure` from `work/`
+(source: `bin/ebsconet_configure.py`). It connects with your tenant `.ini` (read-only), lists the
+funds, expense classes, vendor organizations, locations, material types and acquisition methods
+that exist, and asks you to pick (type part of a name to narrow long lists). It also asks the
+payment method for vendor accounts and the ongoing defaults, shows the result, backs up the old
+file as `ebsconet_config.json.bak-<timestamp>`, and writes the new one. Keys it does not ask
+about (e.g. `org_by_publisher`) are kept. Run it before `for-customer` so the customer's
+drop-downs hold real locations and material types.
+
 **Config file `ebsconet_config.json`** holds what a library chooses. Edit it before the
 first load. The fund, expense class and organization entries are only the *defaults* used
 when the customer leaves a cell blank; the values in the repository are TEST placeholders.

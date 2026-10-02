@@ -51,6 +51,10 @@ If you installed with an older `install.sh` and the wrapper holds `./venv` / `./
 the installer (it rewrites the wrapper). `FileNotFoundError: ebsconet_config.json` means you are
 not in `work/`.
 
+Before sending files to a customer, run `ebsconet-configure` from `work/`: it reads the tenant's
+real funds, expense classes, organizations, locations, material types and acquisition methods
+and writes `work/ebsconet_config.json` for you (see `README_API.md`).
+
 To ship a new `folio_orders_loader`: bump its version and tag, change the pin in
 `requirements.txt`, push, and re-run `install.sh` on the server. The installer always
 force-reinstalls the loader, so its new code lands even if the version is unchanged.

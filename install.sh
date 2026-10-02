@@ -186,8 +186,15 @@ export PYTHONPATH="${INSTALL_DIR}/app\${PYTHONPATH:+:\$PYTHONPATH}"
 exec "${VENV_DIR}/bin/python" "${INSTALL_DIR}/app/ebsconet.py" "\$@"
 EOF
 chmod +x "${INSTALL_DIR}/bin/ebsconet"
+# Interactive helper that builds work/ebsconet_config.json from the tenant's real codes.
+cat > "${INSTALL_DIR}/bin/ebsconet-configure" <<EOF
+#!/usr/bin/env bash
+exec "${VENV_DIR}/bin/python" "${INSTALL_DIR}/app/bin/ebsconet_configure.py" "\$@"
+EOF
+chmod +x "${INSTALL_DIR}/bin/ebsconet-configure"
 mkdir -p "$HOME/.local/bin"
 ln -sf "${INSTALL_DIR}/bin/ebsconet" "$HOME/.local/bin/ebsconet"
+ln -sf "${INSTALL_DIR}/bin/ebsconet-configure" "$HOME/.local/bin/ebsconet-configure"
 
 # Put ~/.local/bin on PATH for future shells (idempotent), and tell the user if the
 # current shell needs a reload.
@@ -224,6 +231,7 @@ Configure and run:
   cd "${INSTALL_DIR}/work"
   cp sample.ini <tenant>.ini     # fill in; never commit or copy credentials around
 ${PATH_NOTE}
+  ebsconet-configure             # pick the tenant's real codes for ebsconet_config.json
   ebsconet --help
 
 Check for updates later without changing anything:
