@@ -18,6 +18,7 @@ PAYMENT_METHODS = ["Cash", "Credit Card", "EFT", "Deposit Account", "Physical Ch
 LIST_SHEETS = ("Funds", "ExpenseClasses", "Organizations", "Locations", "MaterialTypes",
                "AcquisitionMethods", "PaymentMethods", "OrderTypes", "YesNo")
 LIST_PREFIX = "--"      # marks sheets that only feed drop-downs, not sheets to fill in
+REQUIRED_SETTING = "Default EBSCOnet organization"
 YELLOW = PatternFill("solid", fgColor="FFFFCC")
 
 
@@ -77,6 +78,9 @@ def settings_rows(cfg):
     fund = cfg.get("fund_by_route", {})
     folio = cfg.get("folio", {})
     return [
+        (REQUIRED_SETTING, "REQUIRED. The EBSCONET organization: the vendor on every order, "
+         "and where the SOP account numbers are added.", "Organizations",
+         folio.get("vendor_org_code")),
         ("Fund: electronic", "Fund charged for electronic (online) subscriptions when the "
          "line has no fund of its own. Needs an Active budget this fiscal year.",
          "Funds", fund.get("online")),
@@ -89,12 +93,6 @@ def settings_rows(cfg):
          "answer above is No).", "ExpenseClasses", cfg.get("default_expense_class")),
         ("Subject to expense class (optional)", "Optional: one line per SOP subject, written "
          "Subject = class code, e.g. Physical Sciences = SER.", None, None),
-        ("Default access provider", "Organization shown as the access provider when the "
-         "FOLIO Access Provider cell is blank (electronic and print + electronic).",
-         "Organizations", cfg.get("default_org")),
-        ("Vendor organization", "The EBSCONET organization: the vendor on every order, and "
-         "where the SOP account numbers are added.", "Organizations",
-         folio.get("vendor_org_code")),
         ("Default location", "Used when the customer leaves the location blank on the "
          "physical and print + electronic sheets.", "Locations", folio.get("location")),
         ("Default material type", "Used when the customer leaves it blank on the physical "
@@ -131,6 +129,8 @@ def add_settings_sheets(wb, cfg, lists, first=True):
     for n, (setting, text, source, current) in enumerate(settings_rows(cfg), 2):
         ws.append([setting, text, "" if current is None else str(current), ""])
         ws.cell(n, 4).fill = YELLOW
+        if setting == REQUIRED_SETTING:
+            ws.cell(n, 1).font = Font(bold=True, color="C00000")
         formula = list_range(source, lists) if source else None
         if formula:
             dv = DataValidation(type="list", allow_blank=True, showErrorMessage=False,
@@ -193,10 +193,8 @@ def read_overrides(path):
     if "Subject to expense class (optional)" in answers:
         put(("expense_class_by_subject",),
             _subjects(answers["Subject to expense class (optional)"]))
-    if "Default access provider" in answers:
-        put(("default_org",), _code(answers["Default access provider"]))
-    if "Vendor organization" in answers:
-        put(("folio", "vendor_org_code"), _code(answers["Vendor organization"]))
+    if REQUIRED_SETTING in answers:
+        put(("folio", "vendor_org_code"), _code(answers[REQUIRED_SETTING]))
     for key, name in (("Default location", "location"),
                       ("Default material type", "physical_material_type"),
                       ("Acquisition method", "acquisition_method"),

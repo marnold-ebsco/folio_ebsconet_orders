@@ -82,7 +82,7 @@ when the customer leaves a cell blank; the values in the repository are TEST pla
 |---|---|
 | `fund_by_route` | default fund code for `online` / `print` / `pe` |
 | `expense_class_by_subject`, `default_expense_class` | expense class by SOP subject, and the fallback |
-| `org_by_publisher`, `default_org` | access-provider organization code by publisher, and the fallback |
+| `org_by_publisher` | access-provider organization code by publisher (blank otherwise) |
 | `folio.vendor_org_code` | the EBSCONET vendor organization (vendor on every order; receives the account numbers) |
 | `customer_choices` | optional drop-down lists for the customer's `location` and `material_type` columns (empty list = free text) |
 | `rules.exclude_zero_cost`, `rules.exclude_zero_cost_package_members` | drop $0 rows / $0 package members (both default `true`) |
@@ -160,7 +160,7 @@ reorder other columns.
 List whichever filled-in files you have (one or all three; with several, rows are reported as
 `<file>:<row>`). `build` uses the customer's values as they are. A blank cell, or a SOP
 without that column, falls back to the config defaults (`fund_by_route`,
-`expense_class_by_subject` / `default_expense_class`, `org_by_publisher` / `default_org`,
+`expense_class_by_subject` / `default_expense_class`, `org_by_publisher`,
 `ongoing.default_order_type` / `ongoing.interval_days`, `folio.location` /
 `folio.physical_material_type`). A wrong order type or a non-numeric interval is replaced by
 the default with a warning in the report; a One-Time order has no interval. `build` exits 1
@@ -198,7 +198,7 @@ created for it. Long live loads can exceed a terminal's time limit: run them in 
 or a second terminal and read the result afterwards.
 
 What a row becomes: Order Number -> PO number; `folio.vendor_org_code` -> vendor; FOLIO Access Provider -> access provider (electronic and
-P-E lines only; blank = `default_org`); Title Name -> title;
+P-E lines only; blank stays blank; access provider is optional); Title Name -> title;
 ISSN and Title Number (with its type) -> product IDs; Publisher Name; Start / Expiration
 Date -> subscription from / to; Total Cost -> price; FOLIO Fund and Expense Class -> fund
 distribution; FOLIO Order Type / Renewal Interval -> order type and renewal interval;

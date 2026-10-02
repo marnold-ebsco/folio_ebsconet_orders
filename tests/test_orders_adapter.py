@@ -131,9 +131,9 @@ def test_vendor_is_always_the_ebsconet_org_and_the_cell_is_the_access_provider()
     assert line["access_provider_code"] == "ELSEVIER"
 
 
-def test_blank_access_provider_uses_the_default_and_print_has_none():
+def test_blank_access_provider_stays_blank_and_print_has_none():
     blank = dict(ROW, **{"FOLIO Access Provider": ""})
-    assert row_to_line(blank, "pe", CFG)["access_provider_code"] == CFG["default_org"]
+    assert "access_provider_code" not in row_to_line(blank, "pe", CFG)
     line = row_to_line(dict(blank, **{"FOLIO Order Type": "One-Time"}), "print", CFG)
     assert "access_provider_code" not in line
     assert line["vendor_code"] == CFG["folio"]["vendor_org_code"]

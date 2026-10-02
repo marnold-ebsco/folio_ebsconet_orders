@@ -350,7 +350,7 @@ def enrich(row, route, cfg):
             str(row.get(c["subject"]) or "").strip(), cfg["default_expense_class"])
         if cfg["rules"].get("use_expense_classes", True) else "")
     out[a["org"]] = customer_value(row, a["org"]) or cfg["org_by_publisher"].get(
-        str(row.get(c["publisher"]) or "").strip(), cfg["default_org"])
+        str(row.get(c["publisher"]) or "").strip(), "")
     out[a["order_type"]], out[a["renewal_interval"]] = "", ""
     out[a["order_type"]], out[a["renewal_interval"]], more = order_settings(row, cfg)
     warnings += more
@@ -419,6 +419,7 @@ def prepare(input_path, out_dir, cfg, headers_file=None):
 
     routed = {r: [] for r in ROUTES}
     defaults_used = []
+    blank_cells = []
     no_issn = []
     exclusions = []
     warnings = []
@@ -433,7 +434,9 @@ def prepare(input_path, out_dir, cfg, headers_file=None):
             if field == a["renewal_interval"] and new[a["order_type"]] == "One-Time":
                 continue                                 # no interval for a one-time order
             if field in headers and blank(row.get(field)):
-                defaults_used.append((row["_row"], field, new[field]))
+                blank_cells.append(field)
+                if not blank(new[field]):                # a blank stays blank: no default
+                    defaults_used.append((row["_row"], field, new[field]))
         settings_rows.append((new.get(cfg["columns"]["order_number"]), route,
                               new[a["order_type"]], new[a["renewal_interval"]]))
         if blank(row.get(cfg["columns"]["issn"])):
@@ -506,7 +509,7 @@ def prepare(input_path, out_dir, cfg, headers_file=None):
     for field in all_fields:
         applies = sum(len(routed[r]) for r in ROUTES if field in customer_fields(r, cfg))
         if field in headers:
-            blanks = sum(1 for d in defaults_used if d[1] == field)
+            blanks = blank_cells.count(field)
             lines.append("%s: customer column present; blank on %d of %d rows it applies "
                          "to (default used; see prep_defaults_used.csv)"
                          % (field, blanks, applies))

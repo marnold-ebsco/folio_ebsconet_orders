@@ -39,7 +39,7 @@ def row_to_line(row, route, cfg):
     ongoing = cfg["ongoing"]
 
     order_type = _text(row, add["order_type"]) or ongoing["default_order_type"]
-    access_provider = _text(row, add["org"]) or cfg.get("default_org")
+    access_provider = _text(row, add["org"])
     expense = ""
     if cfg.get("rules", {}).get("use_expense_classes", True):
         expense = _text(row, add["expense_class"]) or cfg.get("default_expense_class")

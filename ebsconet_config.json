@@ -50,6 +50,5 @@
     "template_dir": "template_profiles"
   },
   "default_expense_class": "GEN",
-  "org_by_publisher": {},
-  "default_org": "EBSCO"
+  "org_by_publisher": {}
 }

@@ -54,7 +54,7 @@ def test_main_writes_config(tmp_path, monkeypatch):
     answers = [
         "1", "2", "2",                  # funds online/print/pe
         "y", "1", "n",                  # use classes, default class, no subject map
-        "1", "1",                       # default org, vendor org (NOTV filtered out)
+        "1",                            # EBSCOnet organization (NOTV filtered out)
         "1,2", "2",                     # location choices, default location
         "2", "1",                       # material types: journal, then default
         "1",                            # acquisition method
@@ -69,7 +69,7 @@ def test_main_writes_config(tmp_path, monkeypatch):
     assert out["fund_by_route"] == {"online": "ELEC", "print": "PRINT", "pe": "PRINT"}
     assert out["default_expense_class"] == "SER"
     assert out["expense_class_by_subject"] == {}
-    assert out["default_org"] == "EBSCO"
+    assert out["folio"]["vendor_org_code"] == "EBSCO"
     assert out["customer_choices"]["location"] == ["Annex (ANX)", "Main (MAIN)"]
     assert out["folio"]["location"] == "Main (MAIN)"
     assert out["customer_choices"]["material_type"] == ["journal"]
@@ -85,8 +85,9 @@ def test_main_writes_config(tmp_path, monkeypatch):
 def test_decline_writes_nothing(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "t.ini").write_text("okapiUrl=x\n")
-    answers = ["", "", "", "n", "", "", "", "", "", "", "", "", "", "", "n"]
-    # blank funds keep current; "n" to classes; blanks skip the rest; decline write
+    answers = ["", "", "", "n", "1", "", "", "", "", "", "", "", "", "n"]
+    # blank funds keep current; "n" to classes; the EBSCOnet org is required ("1");
+    # blanks skip the rest; decline write
     rc = cfgmod.main(["--ini", "t.ini"], read=scripted(answers),
                      connect_fn=lambda ini: FakeClient())
     assert rc == 1
@@ -103,7 +104,8 @@ def test_worksheet(tmp_path, monkeypatch):
     ws = wb["Defaults"]
     assert wb.sheetnames[0] == "Defaults"
     assert [c.value for c in ws[1]] == ["Setting", "What it is", "Current default", "Your answer"]
-    assert ws.max_row == 15
+    assert ws.max_row == 14
+    assert ws["A2"].value == "Default EBSCOnet organization"
     assert [r[0] for r in wb["--Funds"].iter_rows(values_only=True)] == [
         "Funds", "ELEC - Electronic", "PRINT - Print"]
     assert [r[0] for r in wb["--Organizations"].iter_rows(values_only=True)] == [

@@ -366,7 +366,7 @@ def test_answers_on_the_defaults_sheet_become_config_overrides(cfg, tmp_path):
     path, wb = _filled_workbook(cfg, tmp_path)
     ws = wb["Defaults"]
     answers = {"Fund: electronic": "ELEC2 - Electronic two", "Use expense classes?": "No",
-               "Default access provider": "ACME - Acme", "Default location": "Main (MAIN)",
+               "Default EBSCOnet organization": "ACME - Acme", "Default location": "Main (MAIN)",
                "Default order type": "one time", "Default renewal interval (days)": 180,
                "Subject to expense class (optional)": "Physical Sciences = SER; Art = ART"}
     for row in ws.iter_rows(min_row=2):
@@ -375,7 +375,7 @@ def test_answers_on_the_defaults_sheet_become_config_overrides(cfg, tmp_path):
     wb.save(path)
     assert cs.read_overrides(path) == {
         "fund_by_route": {"online": "ELEC2"}, "rules": {"use_expense_classes": False},
-        "default_org": "ACME", "folio": {"location": "Main (MAIN)"},
+        "folio": {"vendor_org_code": "ACME", "location": "Main (MAIN)"},
         "ongoing": {"default_order_type": "One-Time", "interval_days": 180},
         "expense_class_by_subject": {"Physical Sciences": "SER", "Art": "ART"}}
 

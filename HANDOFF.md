@@ -150,14 +150,16 @@ Audit item 2 "7 Term" is therefore settled (used for type + interval, no separat
   FOLIO mapping is NOT built yet (see audit items 2-3 below). 215 tests, flake8 clean.
 
 ## DONE 2026-10-02: vendor vs access provider
-The PO vendor is always the EBSCONET org (`folio.vendor_org_code`; the Defaults sheet question is
-now "Vendor organization"). The customer column `FOLIO Org` is renamed **`FOLIO Access Provider`**
-(config key `added_columns.org` unchanged) and goes to the loader's `access_provider_code` on
-electronic and P-E lines only; blank = `default_org` (Defaults question "Default access
-provider"; `org_by_publisher` still maps publisher -> access provider). `ensure_accounts` adds
-accounts to the vendor org only. The MARC route was already right (`990$v` = access provider).
-Old customer files with a `FOLIO Org` header are not read (blank -> default). Not tried on a
-tenant. 217 tests, flake8 clean.
+The PO vendor is always the EBSCONET org, `folio.vendor_org_code`. On the Defaults sheet it is the
+first row, **"Default EBSCOnet organization"**, marked REQUIRED (bold red name); in
+`ebsconet-configure` it is a required pick. The customer column `FOLIO Org` is renamed
+**`FOLIO Access Provider`** (config key `added_columns.org` unchanged) and goes to the loader's
+`access_provider_code` on electronic and P-E lines only. Access provider is optional: a blank
+cell stays blank (`default_org` and its Defaults question were removed; `org_by_publisher` can
+still fill it from the publisher). `ensure_accounts` adds accounts to the vendor org only. The MARC
+route was already right (`990$v`). Old customer files with a `FOLIO Org` header are not read. Not
+tried on a tenant. A blank Defaults answer for the EBSCOnet org keeps the config value (no hard
+error yet). 217 tests, flake8 clean.
 
 ## Audit DONE 2026-10-02: decisions needed (no code changed)
 Full table: `work/composite_orders_column_audit.md` (git-ignored). Pick from these, then implement:

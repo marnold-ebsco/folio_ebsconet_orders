@@ -170,7 +170,7 @@ def test_enrich_adds_columns_and_iso_dates(cfg):
     assert out["Start Date"] == "2026-01-02"
     assert out["FOLIO Fund"] == "TEST-PRINT"
     assert out["FOLIO Expense Class"] == "PHY"
-    assert out["FOLIO Access Provider"] == "EBSCO"
+    assert out["FOLIO Access Provider"] == ""
     assert out["Package?"] == "No"
     assert out["Title Number"] == "P1"
     assert out["Title Number Type"] == "Publisher or distributor number"
@@ -256,7 +256,7 @@ def test_blank_or_missing_customer_values_fall_back_to_defaults(cfg):
                             "FOLIO Access Provider": "  "})
     out, _ = prep.enrich(blank_row, "print", cfg)
     assert (out["FOLIO Fund"], out["FOLIO Expense Class"], out["FOLIO Access Provider"]) == (
-        "TEST-PRINT", "PHY", "EBSCO")                       # subject map, default org
+        "TEST-PRINT", "PHY", "")                            # subject map; provider stays blank
     out, _ = prep.enrich(make_row(), "online", cfg)         # no such columns at all
     assert out["FOLIO Fund"] == "TEST-ELEC"
 
@@ -288,9 +288,9 @@ def test_prepare_uses_existing_customer_columns_once_and_reports_defaults(cfg, t
     got = [dict(zip(names, [c.value for c in row])) for row in out.iter_rows(min_row=2)]
     keys = ("FOLIO Fund", "FOLIO Access Provider", "FOLIO Expense Class")
     assert [tuple(g[k] for k in keys) for g in got] == [
-        ("F1", "O1", "E1"), ("F2", "EBSCO", "PHY")]
+        ("F1", "O1", "E1"), ("F2", None, "PHY")]
     used = (tmp_path / "out" / "prep_defaults_used.csv").read_text(encoding="utf-8")
-    assert "FOLIO Access Provider,EBSCO" in used and "FOLIO Expense Class,PHY" in used
+    assert "FOLIO Expense Class,PHY" in used and "FOLIO Access Provider" not in used
     assert "FOLIO Fund" not in used
     report = (tmp_path / "out" / "prep_report.txt").read_text(encoding="utf-8")
     assert "FOLIO Access Provider: customer column present; blank on 1 of 2" in report
@@ -305,7 +305,7 @@ def test_config_is_split_between_fixed_and_library_settings():
     for key in ("columns", "added_columns", "extra_marc_map", "format_routes",
                 "output_names", "marc_indicators"):
         assert key in fixed and key not in library
-    for key in ("rules", "ongoing", "fund_by_route", "folio", "default_org"):
+    for key in ("rules", "ongoing", "fund_by_route", "folio"):
         assert key in library and key not in fixed
 
 
