@@ -133,6 +133,8 @@ mkdir -p "${INSTALL_DIR}/bin" "${INSTALL_DIR}/work"
 echo "Installing application code..."
 rm -rf "${INSTALL_DIR}/app"
 cp -r "$TMP/app" "${INSTALL_DIR}/app"
+# Step-by-step guide at the top of the install folder (replaced on every upgrade).
+[[ -f "${INSTALL_DIR}/app/QUICKSTART.md" ]] && cp "${INSTALL_DIR}/app/QUICKSTART.md" "${INSTALL_DIR}/README.md"
 
 # The loader is pinned in requirements.txt as git+ssh; fetch the same tag as a
 # tarball over HTTPS instead so neither git nor an SSH key is needed.
