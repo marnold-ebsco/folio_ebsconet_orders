@@ -70,6 +70,13 @@ python3-venv`).
   (needed for `load`, which reads the config, not the workbook).
 - On the EC2 the user must re-run `install.sh --dir /working/migration/scripts/ebsconet` to get
   `ebsconet-configure`.
+- **Nested-install gotcha (2026-10-06):** running the curl one-liner with no `--dir` from inside
+  `/working/migration/scripts/ebsconet` created `/working/migration/scripts/ebsconet/ebsconet`
+  (default `--dir` is `./ebsconet` under the current directory) and re-pointed the
+  `~/.local/bin/ebsconet*` links at that empty copy. Fix: delete the nested folder, re-run with
+  the absolute `--dir /working/migration/scripts/ebsconet`, check `ls -l ~/.local/bin/ebsconet*`.
+  Always pass the absolute `--dir`; `CLAUDE.md` says so. Whether the fix has been run on the EC2
+  is not confirmed.
 
 ## What the workflow does
 1. `ebsconet.py for-customer SOP.xlsx [--ini T.ini]` writes ONE workbook,
