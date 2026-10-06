@@ -77,6 +77,12 @@ python3-venv`).
   the absolute `--dir /working/migration/scripts/ebsconet`, check `ls -l ~/.local/bin/ebsconet*`.
   Always pass the absolute `--dir`; `CLAUDE.md` says so. Whether the fix has been run on the EC2
   is not confirmed.
+- **QUICKSTART.md (2026-10-06, commit `c060490`):** repo-root step-by-step guide from SOP to
+  `pol_export.csv` (configure, `for-customer`, `--from-worksheet`, `build`, dry-run `load`,
+  `load --live`, `finish`). `install.sh` copies it to `<install dir>/README.md` on every
+  install/upgrade, so edit the repo copy, never the server one. Not yet tested on the EC2: the
+  copy step has not run there, and the command sequence was checked against `--help` only, not
+  run end to end.
 
 ## What the workflow does
 1. `ebsconet.py for-customer SOP.xlsx [--ini T.ini]` writes ONE workbook,
