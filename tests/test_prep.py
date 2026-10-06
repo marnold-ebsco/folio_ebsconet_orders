@@ -18,7 +18,8 @@ HEADERS = ["Title Name", "ISSN", "Format", "Start Date", "Expiration Date",
 
 @pytest.fixture
 def cfg():
-    return prep.load_config(ROOT / "ebsconet_config.json")
+    from conftest import with_test_values
+    return with_test_values(prep.load_config(ROOT / "ebsconet_config.json"))
 
 
 def make_row(**kw):

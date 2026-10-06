@@ -17,18 +17,15 @@
   },
   "customer_choices": {
     "_comment": "Optional drop-down lists for the customer columns. Leave a list empty for free text.",
-    "location": ["test_ebsconet_location (TEST-EBSCONET-LOC)"],
-    "material_type": ["journal"]
+    "location": [],
+    "material_type": []
   },
   "fund_by_route": {
-    "online": "TEST-ELEC",
-    "print": "TEST-PRINT",
-    "pe": "TEST-PRINT"
+    "online": "",
+    "print": "",
+    "pe": ""
   },
-  "expense_class_by_subject": {
-    "Physical Sciences": "PHY",
-    "Social Sciences": "SOC"
-  },
+  "expense_class_by_subject": {},
   "folio": {
     "_comment": "Values used by folio_setup.py. Names/codes must exist on the target tenant.",
     "profile_name_prefix": "EBSCONET order migration",
@@ -40,8 +37,8 @@
     "subscription_interval": "1",
     "title_number_type": "Publisher or distributor number",
     "create_inventory": "None",
-    "physical_material_type": "journal",
-    "location": "test_ebsconet_location (TEST-EBSCONET-LOC)",
+    "physical_material_type": "",
+    "location": "",
     "receipt_status": {
       "online": "Receipt Not Required",
       "print": "Pending",
@@ -50,5 +47,5 @@
     "account_payment_method": "Other",
     "template_dir": "template_profiles"
   },
-  "default_expense_class": "GEN"
+  "default_expense_class": ""
 }

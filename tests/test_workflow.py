@@ -17,7 +17,8 @@ HEADERS = ["Title Name", "ISSN", "Format", "Order Number", "Total Cost",
 
 @pytest.fixture
 def cfg():
-    return prep.load_config(ROOT / "ebsconet_config.json")
+    from conftest import with_test_values
+    return with_test_values(prep.load_config(ROOT / "ebsconet_config.json"))
 
 
 def make_sop(path, rows, headers=HEADERS):
