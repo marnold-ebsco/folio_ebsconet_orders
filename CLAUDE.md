@@ -27,12 +27,15 @@ The API loader (`folio_orders_loader`) is a separate project with its own handof
 
 `install.sh` installs what is on GitHub, so push first. Re-running it upgrades in
 place: `app/` is replaced, `work/` (config, `.ini` files, `out/`) is left alone.
-Run it from the folder that contains `ebsconet`:
+Always pass the absolute `--dir`. Without it the default is `./ebsconet` under the
+current directory, so running it from inside the install creates a nested copy. The
+EC2 install is `/working/migration/scripts/ebsconet`:
 
-    curl -fsSL https://raw.githubusercontent.com/marnold-ebsco/folio_ebsconet_orders/main/install.sh | bash -s --
+    curl -fsSL https://raw.githubusercontent.com/marnold-ebsco/folio_ebsconet_orders/main/install.sh | bash -s -- --dir /working/migration/scripts/ebsconet
 
-Options: `--check` (report only), `--dir PATH` (reuse the original value),
-`--recreate-venv`, `--ref REF`. See "Installing on a server" in `README.md`.
+Options: `--check` (report only), `--recreate-venv`, `--ref REF`. The installer also
+re-points the `ebsconet` links in `~/.local/bin` at `--dir`. See "Installing on a
+server" in `README.md`.
 
 ## Rules
 
