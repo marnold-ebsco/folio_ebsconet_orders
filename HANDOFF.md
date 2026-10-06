@@ -167,6 +167,16 @@ drop-downs ("CODE - Name" from `--ini`) and `build` keeps only the code (`code_v
 Open points from this run: prep report counts print rows in "Access Provider blank on N of 150"
 though the column does not apply to them; `--from-worksheet` needs a terminal for its prompt.
 
+**Repeat run (2026-10-02, later), simulating the customer's return:** started from
+`out/customer/testLibrary_ebsconet_filled.xlsx` (did NOT re-run `for-customer`). `build` (150 rows:
+138 online, 10 print, 2 P-E; 140 ongoing / 10 one-time; 0 warnings) -> `--from-worksheet`
+(backup `ebsconet_config.json.bak-20261002_131354`) -> `load` dry run (dry-run 150) -> `load --live`
+(created 150, exit 0, 3 accounts already present, none added) -> `finish --live` (150 POL rows).
+Then all 150 POs were deleted: list `out/delete_testlibrary_rerun.csv`, dry run 150 `dry-run`,
+live 150 `deleted`, 0 failures, backups `out/deleted_backup_testlibrary_rerun/`, log
+`out/delete_live_rerun.csv`. No UI spot-check was done. Bugfest again holds none of this
+project's POs; the vendor accounts remain.
+
 ## NEXT STEPS, in order
 1. You: EC2 / real-tenant test. Re-run `install.sh` first, then `ebsconet-configure` (or
    `--worksheet`), `for-customer` (the Moffitt files were built from the stock TEST config, so
