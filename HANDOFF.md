@@ -30,6 +30,19 @@ or `ebsconet-configure` supplies values. Tests that need the TEST values get the
 `test_workflow.py`). 223 tests pass. Not yet re-run on the EC2 (`install.sh` re-run needed).
 223 tests pass, flake8 clean (`--max-line-length=100`).
 
+## Latest session (2026-10-21, pushed as `69c6ae5`)
+- The customer column is now **FOLIO Access Provider (optional)** (`added_columns.org` in
+  `pipeline/pipeline_config.json`), with a hover note on the header (`HEADER_NOTES` in
+  `ebsconet_prep.py`). Old returned workbooks with the old title will read a blank access
+  provider; re-issue them. A tenant `added_columns` override needs the new name too.
+- Loaded POs stay **Pending**: the adapter never passes `open_orders`, so the loader only
+  creates them (`workflowStatus: Pending`). Checked in code, not against a tenant.
+- **Open on the EC2:** (1) `install.sh` returned 403 (GitHub API rate limit, 60/hour
+  unauthenticated). Fix: `gh auth login -h github.com -p https -w`, then
+  `export GITHUB_TOKEN=$(gh auth token)` and re-run the install with `--check`, then without it.
+  (2) Remove `default_org` and `org_by_publisher` from `work/ebsconet_config.json` (unused;
+  snippet given in chat, not confirmed run). (3) Then the EC2 / real-tenant test.
+
 ## State
 - On `main` (merged 2026-10-01; `api-load-default` deleted). Loader pinned to v0.3.4
   (`requirements.txt`). The **Orders API is the default load**; the MARC / Data Import route is
