@@ -103,7 +103,7 @@ python3-venv`).
    drop-downs from the tenant. Zero-dollar lines are removed; Fee and unrecognized-format lines go
    to `<name>_not_sent.csv`. 30 `drop_columns.names` (`pipeline_config.json`) are removed from the
    headers; required columns and Account Number are never dropped.
-2. Customer columns (light yellow `FFFFCC`): all files `FOLIO Access Provider`, `FOLIO Fund`,
+2. Customer columns (light yellow `FFFFCC`): all files `FOLIO Access Provider (optional)`, `FOLIO Fund`,
    `FOLIO Expense Class`, `FOLIO Order Type` (Ongoing / One-Time), `FOLIO Renewal Interval
    (Days)`; physical and P-E also `FOLIO Location`, `FOLIO Material Type` (drop-downs when
    `customer_choices` in `ebsconet_config.json` lists values). Placement: `customer_columns` in
@@ -218,7 +218,7 @@ project's POs; the vendor accounts remain.
 Rewrite `README.md` (index), `README_API.md`, `README_DATA_IMPORT.md`, `RUNBOOK.md`, `PLAN.md`
 and `docs/CLIENT_GUIDE.md` together once the code settles. Known gaps to fold in: the one customer
 workbook with its Defaults sheet, `ebsconet-configure` (+ `--worksheet`, `--from-worksheet`), the
-EC2 installer layout (`~/ebsconet/{app,venv,work}`) and `work/` folder, `FOLIO Access Provider`
+EC2 installer layout (`~/ebsconet/{app,venv,work}`) and `work/` folder, `FOLIO Access Provider (optional)`
 and the required EBSCOnet org, the Term-based order type and interval, the `drop_columns` list, and
 the new mappings (URL, `Package?`, Currency, Quantity, Purchase Order Number, Open Access, Your
 Access, Fund Code commented out). Also remove the repo-root-vs-`work/` command mismatch and the

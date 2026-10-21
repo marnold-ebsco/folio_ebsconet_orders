@@ -14,6 +14,7 @@ from urllib.parse import urlsplit, urlunsplit
 from pathlib import Path
 
 from openpyxl import Workbook, load_workbook
+from openpyxl.comments import Comment
 from openpyxl.styles import PatternFill
 from openpyxl.worksheet.datavalidation import DataValidation
 
@@ -380,6 +381,14 @@ def enrich(row, route, cfg):
     return out, warnings
 
 
+# Hover notes on the customer-facing column headings.
+HEADER_NOTES = {
+    "FOLIO Access Provider (optional)": (
+        "OPTIONAL. Code of the organization that supplies the electronic resource "
+        "(publisher or platform). Leave blank if not needed."),
+}
+
+
 def fill_sheet(ws, columns, rows, highlight, validations=None):
     """validations: {column name: DataValidation}, applied down that column (and well
     below the last row, so the customer can add lines)."""
@@ -397,6 +406,8 @@ def fill_sheet(ws, columns, rows, highlight, validations=None):
                 len(name) + 3, 14)
             for r in range(1, ws.max_row + 1):
                 ws.cell(row=r, column=idx).fill = HIGHLIGHT
+            if name in HEADER_NOTES:
+                ws.cell(row=1, column=idx).comment = Comment(HEADER_NOTES[name], "EBSCOnet")
 
 
 def write_workbook(path, columns, rows, highlight, validations=None):

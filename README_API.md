@@ -24,7 +24,7 @@ Nothing is opened or encumbered. `RUNBOOK.md` is the step-by-step checklist and
 - A FOLIO tenant, and a user that can create and edit orders and organizations.
 - On the tenant: the EBSCONET **vendor organization** (its code is `folio.vendor_org_code`,
   default `ebsconet`; it is the vendor on every order); the organizations the customer will
-  name in **FOLIO Access Provider** (optional, marked as vendors); the **funds** named in **FOLIO Fund**, each Active with an Active budget for the
+  name in **FOLIO Access Provider (optional)** (optional, marked as vendors); the **funds** named in **FOLIO Fund**, each Active with an Active budget for the
   order's fiscal year that lists the **expense classes** in use (the budget amount does not
   matter; a zero-based budget is fine); and the **location** and **material type** used for
   print / P-E lines.
@@ -139,7 +139,7 @@ are still accepted by `build`.)
 
 | Sheet | Columns |
 |---|---|
-| electronic (`online`) | `FOLIO Access Provider`, `FOLIO Fund`, `FOLIO Expense Class`, `FOLIO Order Type`, `FOLIO Renewal Interval (Days)` |
+| electronic (`online`) | `FOLIO Access Provider (optional)`, `FOLIO Fund`, `FOLIO Expense Class`, `FOLIO Order Type`, `FOLIO Renewal Interval (Days)` |
 | physical (`print`) | the five above plus `FOLIO Location`, `FOLIO Material Type` |
 | P-E (`pe`) | the same seven columns as physical |
 
@@ -196,7 +196,7 @@ every PO, in the dry run and with `--live`: a PO that fails it is `invalid` and 
 created for it. Long live loads can exceed a terminal's time limit: run them in the background
 or a second terminal and read the result afterwards.
 
-What a row becomes: Order Number -> PO number; `folio.vendor_org_code` -> vendor; FOLIO Access Provider -> access provider (electronic and
+What a row becomes: Order Number -> PO number; `folio.vendor_org_code` -> vendor; FOLIO Access Provider (optional) -> access provider (electronic and
 P-E lines only; blank stays blank; access provider is optional); Title Name -> title;
 ISSN and Title Number (with its type) -> product IDs; Publisher Name; Start / Expiration
 Date -> subscription from / to; Total Cost -> price; FOLIO Fund and Expense Class -> fund
