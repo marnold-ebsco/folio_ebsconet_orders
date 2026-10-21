@@ -1,4 +1,4 @@
-# Handoff: EBSCOnet orders pipeline (updated 2026-10-02, all code decisions closed; next = EC2 / real-tenant test, then README rework)
+# Handoff: EBSCOnet orders pipeline (updated 2026-10-21, all code decisions closed; next = fix the EC2 install, then EC2 / real-tenant test, then README rework)
 
 Read this for the EBSCOnet / `folio_ebsconet_orders` work (three customer spreadsheets, the
 `ebsconet.py` workflow, the adapter). For the API loader package itself
@@ -18,7 +18,17 @@ copy, `out/`, customer xlsx and `test_data_created.json` in git-ignored `work/`.
 (`../.venv/bin/python ../folio_cleanup_test_pos.py --ini sunflower_bugfest.ini`). All `out/...`,
 `*.ini` paths below are relative to `work/`. The repo-root `ebsconet_config.json` is the tracked
 seed template. Docs (README*, RUNBOOK) still show repo-root commands for customers; not rewritten.
-221 tests pass, flake8 clean (`--max-line-length=100`).
+**Seed config is blank (commit `fee90b2`, 2026-10-21):** the tracked `ebsconet_config.json` no
+longer holds bugfest TEST values: `fund_by_route` (3), `folio.location`,
+`folio.physical_material_type`, `default_expense_class`, `expense_class_by_subject` ({}) and
+`customer_choices` lists are empty. The Defaults sheet "Current default" column therefore shows
+blanks on a fresh install (it reads the merged config; a tenant `work/ebsconet_config.json`
+overrides the seed, so check the EC2 copy for leftover TEST values). Blank funds / location fall
+through to blank order lines, so the dry-run budget check flags them `invalid` until the customer
+or `ebsconet-configure` supplies values. Tests that need the TEST values get them from
+`tests/conftest.py` `with_test_values()` (used by the `cfg` fixtures in `test_prep.py` and
+`test_workflow.py`). 223 tests pass. Not yet re-run on the EC2 (`install.sh` re-run needed).
+223 tests pass, flake8 clean (`--max-line-length=100`).
 
 ## State
 - On `main` (merged 2026-10-01; `api-load-default` deleted). Loader pinned to v0.3.4
