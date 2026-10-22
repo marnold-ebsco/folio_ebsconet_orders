@@ -11,7 +11,8 @@
                           (the profiles are only needed for --use-marc)
   load                    create the POs through the Orders API (default); with
                           --use-marc: preflight + load the MARC files by Data Import
-  finish                  export the PO / POL numbers for EBSCONET (out/pol_export.csv);
+  finish                  export the PO / POL numbers for EBSCONET (out/pol_export.csv)
+                          and the PO / title map (out/po_title_map.csv and .xlsx);
                           with --use-marc, first convert the loaded POs to ongoing
 
 Nothing is written to FOLIO without --live (setup, load, finish). RUNBOOK.md has the
@@ -173,12 +174,22 @@ def cmd_finish(args, cfg):
     else:
         print("%d PO numbers; the API load already set order type and renewal "
               "details, so there is no ongoing conversion" % len(numbers))
-    rows = folio_export_pols.export_rows(
-        folio_export_pols.fetch_lines(client, po_numbers=numbers))
+    lines = list(folio_export_pols.fetch_lines(client, po_numbers=numbers))
+    rows = folio_export_pols.export_rows(lines)
     export = Path(args.out) / "pol_export.csv"
     folio_export_pols.write_csv(export, rows)
     odd = sum(1 for r in rows if r["matches_po_plus_1"] != "yes")
     print("PO / POL export: %d lines -> %s (%d not PO+'-1')" % (len(rows), export, odd))
+    if lines:
+        id_types = folio_export_pols.fetch_identifier_types(client)
+        statuses = folio_export_pols.fetch_po_statuses(
+            client, [ln.get("purchaseOrderId") for ln in lines])
+    else:
+        id_types, statuses = {}, {}
+    title_map = folio_export_pols.title_map_rows(lines, id_types, statuses)
+    map_csv = Path(args.out) / "po_title_map.csv"
+    xlsx = folio_export_pols.write_title_map(map_csv, title_map)
+    print("PO / title map: %d lines -> %s and %s" % (len(title_map), map_csv, xlsx.name))
     return 1 if counts.get("error") else 0
 
 

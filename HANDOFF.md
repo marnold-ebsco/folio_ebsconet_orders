@@ -43,6 +43,18 @@ or `ebsconet-configure` supplies values. Tests that need the TEST values get the
   (2) Remove `default_org` and `org_by_publisher` from `work/ebsconet_config.json` (unused;
   snippet given in chat, not confirmed run). (3) Then the EC2 / real-tenant test.
 
+## PO / title map (2026-10-22, uncommitted)
+`finish` now also writes `out/po_title_map.csv` and `.xlsx` (frozen header) for EBSCOnet, built
+from the FOLIO order lines after the load (`folio_export_pols.title_map_rows()`). Columns:
+po_number, pol_number, folio_po_uuid, po_status, title, issn, title_number,
+title_number_type, vendor_po_number, vendor_account, subscription_from, subscription_to,
+publisher, order_format, po_line_description, pol_id. `pol_export.csv` is unchanged. Covers
+only the POs in the prepared workbooks (this run). 224 tests pass; not tried on a tenant.
+**Options not taken (ask EBSCOnet):** other identifiers beyond ISSN / title number / vendor
+PO number; xlsx only or CSV only; all POs under a prefix instead of this run
+(`folio_export_pols.py --prefix` exists for the old file); join back to SOP row columns
+(fund, location, account) from the workbooks.
+
 ## State
 - On `main` (merged 2026-10-01; `api-load-default` deleted). Loader pinned to v0.3.4
   (`requirements.txt`). The **Orders API is the default load**; the MARC / Data Import route is

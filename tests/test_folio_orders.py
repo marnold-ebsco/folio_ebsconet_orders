@@ -141,6 +141,28 @@ def test_export_rows_flags_non_first_lines():
     assert rows[0]["po_number"] == "E1" and rows[0]["subscription_to"] == "2026-12-31"
 
 
+def test_title_map_rows_and_files(tmp_path):
+    lines = [
+        {"id": "a", "poLineNumber": "E1-1", "purchaseOrderId": "P1", "titleOrPackage": "T1",
+         "publisher": "Pub", "orderFormat": "Electronic Resource",
+         "details": {"productIds": [{"productId": "1234-5678", "productIdType": "i1"},
+                                    {"productId": "TN9", "productIdType": "i2"}],
+                     "subscriptionFrom": "2026-01-01"},
+         "vendorDetail": {"vendorAccount": "AC1",
+                          "referenceNumbers": [{"refNumber": "V1"}, {"refNumber": "V2"}]}},
+        {"id": "b", "poLineNumber": "E2-1", "purchaseOrderId": "P2", "titleOrPackage": "T2"},
+    ]
+    rows = exp.title_map_rows(lines, {"i1": "ISSN", "i2": "Title number"}, {"P1": "Pending"})
+    assert rows[0]["issn"] == "1234-5678" and rows[0]["title_number"] == "TN9"
+    assert rows[0]["title_number_type"] == "Title number"
+    assert rows[0]["vendor_po_number"] == "V1; V2" and rows[0]["po_status"] == "Pending"
+    assert rows[1]["issn"] == "" and rows[1]["vendor_account"] == ""
+    xlsx = exp.write_title_map(tmp_path / "m.csv", rows)
+    assert xlsx.exists()
+    first = list(csv.DictReader(open(tmp_path / "m.csv", encoding="utf-8")))[0]
+    assert first["folio_po_uuid"] == "P1"
+
+
 def test_fetch_lines_by_prefix_and_by_po():
     c = FakeClient(lines=LINES)
     assert len(list(exp.fetch_lines(c, prefix="E"))) == 2
