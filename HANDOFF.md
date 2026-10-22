@@ -55,6 +55,16 @@ PO number; xlsx only or CSV only; all POs under a prefix instead of this run
 (`folio_export_pols.py --prefix` exists for the old file); join back to SOP row columns
 (fund, location, account) from the workbooks.
 
+**Committed and pushed as `4976fab`.** Live check on **Sunflower bugfest**
+(`sunflower_bugfest.ini`, tenant fs09000000; nothing run on Trillium): 20 POs loaded
+2026-10-22 from trimmed copies of the testLibrary workbooks (14 online, 4 print, 2 P/E), all
+`created`, Pending, `finish` wrote the map. Output: `work/out/bugfest_20/` (`po_title_map.xlsx`
+/ `.csv`, `pol_export.csv`, `logs/`, input workbooks). **The 20 POs are STILL IN BUGFEST** by
+the user's choice; remove later with `folio_delete_orders.py` (CSV of PO numbers from
+`out/bugfest_20/pol_export.csv`, dry run, then `--live`, backups kept). Check: `vendor_po_number`
+looked empty on the first rows of the map; confirm it fills when the SOP has a Purchase Order
+Number. `install.sh` re-run on the EC2 is needed to get the map there.
+
 ## State
 - On `main` (merged 2026-10-01; `api-load-default` deleted). Loader pinned to v0.3.4
   (`requirements.txt`). The **Orders API is the default load**; the MARC / Data Import route is
