@@ -7,6 +7,7 @@ to logs/accounts_<timestamp>.txt.
 """
 import argparse
 import csv
+import json
 import re
 from collections import Counter
 from datetime import datetime
@@ -260,6 +261,33 @@ def write_load_log(folder, started, ended, live, ini, workbooks, line_count, res
     return txt
 
 
+def write_orders_ndjson(path, client, lines):
+    """Write the composite-order payloads the loader would POST, one JSON object per line.
+
+    Builds each order exactly as folio_orders_loader.load() does (read-only lookups, no
+    writes to FOLIO). POs that are invalid or fail a lookup are left out; load_<start>.csv
+    reports them. Returns the number of orders written.
+    """
+    from folio_orders_loader.builder import build_order
+    from folio_orders_loader.lookups import LookupError_, Resolver
+    from folio_orders_loader.records import group_by_po
+
+    resolver = Resolver(client)
+    pos, problems = group_by_po(lines)
+    count = 0
+    with open(path, "w", encoding="utf-8") as handle:
+        for po, group in pos.items():
+            if po in problems:
+                continue
+            try:
+                order = build_order(po, group, resolver)
+            except LookupError_:
+                continue
+            handle.write(json.dumps(order, ensure_ascii=False) + "\n")
+            count += 1
+    return count
+
+
 def load_orders(in_dir, ini, cfg, live, skip_accounts=False):
     """Add vendor accounts, then create the POs through the Orders API.
 
@@ -287,6 +315,9 @@ def load_orders(in_dir, ini, cfg, live, skip_accounts=False):
                                  ini, in_dir, report)
         print("accounts log: %s" % log)
     started = datetime.now()
+    ndjson = Path(in_dir) / "logs" / ("orders_%s.ndjson" % started.strftime("%Y%m%d_%H%M%S"))
+    ndjson.parent.mkdir(parents=True, exist_ok=True)
+    print("%d order(s) written to %s" % (write_orders_ndjson(ndjson, client, lines), ndjson))
     results = load(client, lines, live=live, check_budget=True)
     log = write_load_log(Path(in_dir) / "logs", started, datetime.now(), live, ini,
                          in_dir, len(lines), results)
