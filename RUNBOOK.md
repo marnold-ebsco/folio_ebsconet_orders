@@ -267,6 +267,7 @@ files together (or use a separate `--out` folder per SOP, e.g. `--out out/2026-s
 | `library-EBSCONET_online / -print / _P-E.xlsx` | build | The filled-in lines split by format |
 | `prep_report.txt`, `prep_exclusions.csv`, `prep_no_issn.csv`, `prep_defaults_used.csv` | build | What was excluded, loaded without an ISSN, or given a default |
 | `logs/accounts_<timestamp>.txt` | load | Vendor accounts added (or that would be): mode, start / end / elapsed time, account numbers |
+| `logs/orders_<timestamp>.ndjson` | load | The order payloads the load would POST, one per line (dry run too); invalid POs are left out |
 | `pol_export.csv` | finish | The PO / POL list for EBSCONET |
 | `marc/*.mrc`, `marc/*.mrk` | build | MARC route: files for Data Import, and readable text copies |
 | `import_logs/*.csv` | load --use-marc | MARC route: audit log of each import |

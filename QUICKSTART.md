@@ -74,7 +74,8 @@ ebsconet load --ini TENANT.ini --live
 - POs are created **Pending**. Vendor accounts are added first.
 - A bad PO does not stop the others, but the command exits 1. Fix the cause and run the
   same command again: POs that already exist are skipped.
-- Logs: `out/logs/accounts_<time>.txt` and `out/logs/load_<time>.txt` (plus `.csv`).
+- Logs: `out/logs/accounts_<time>.txt` and `out/logs/load_<time>.txt` (plus `.csv`), and `out/logs/orders_<time>.ndjson` (the orders
+  the load would send, one per line; a dry run writes it too, so you can review it first).
 - In FOLIO, spot-check a few PO numbers in Orders (status, order type, vendor, fund,
   expense class, price, location, account number).
 

@@ -28,7 +28,7 @@ through to blank order lines, so the dry-run budget check flags them `invalid` u
 or `ebsconet-configure` supplies values. Tests that need the TEST values get them from
 `tests/conftest.py` `with_test_values()` (used by the `cfg` fixtures in `test_prep.py` and
 `test_workflow.py`). 223 tests pass. Not yet re-run on the EC2 (`install.sh` re-run needed).
-223 tests pass, flake8 clean (`--max-line-length=100`).
+224 tests pass, flake8 clean (`--max-line-length=100`).
 
 ## Latest session (2026-10-21, pushed as `69c6ae5`)
 - The customer column is now **FOLIO Access Provider (optional)** (`added_columns.org` in
@@ -85,6 +85,11 @@ Number. `install.sh` re-run on the EC2 is needed to get the map there.
   Reference numbers other than PO Number are not mapped (no SOP column).
 - **Logs:** each `load` writes `<out>/logs/accounts_<ts>.txt` and `<out>/logs/load_<ts>.txt`
   (mode, ini, timing, totals by status, every PO needing attention) plus a matching `.csv`.
+  **NDJSON (2026-10-27, `e931656`):** each `load` (dry run too) also writes
+  `<out>/logs/orders_<ts>.ndjson`, one composite-order payload per line (what would be POSTed;
+  invalid / lookup-failed POs left out). `write_orders_ndjson()` in the adapter builds it with the
+  loader's `build_order`, so each order is built twice (once here, once in `load()`); the loader
+  package itself has no NDJSON code. Read-only lookups only. No test yet; not tried on a tenant.
 - **Budget checks:** the adapter calls the loader's `load(..., check_budget=True)`, so every PO
   (dry run and `--live`) is checked for an Active budget per fund and a listed expense class;
   failures are `invalid` and nothing is POSTed. Blank expense classes skip the class half, and
