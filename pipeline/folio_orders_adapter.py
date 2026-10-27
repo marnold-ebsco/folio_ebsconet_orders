@@ -9,6 +9,7 @@ import argparse
 import csv
 import json
 import re
+import sys
 from collections import Counter
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
@@ -261,6 +262,36 @@ def write_load_log(folder, started, ended, live, ini, workbooks, line_count, res
     return txt
 
 
+LOAD_BATCH = 10     # POs handed to the loader at a time, so progress can be shown
+
+
+def show_progress(label, done, total):
+    """Show 'label: done/total'. A terminal gets one updating line; a log gets a line
+    every 25 POs and at the end."""
+    tty = sys.stdout.isatty()
+    if not tty and done != total and done % 25:
+        return
+    print("%s: %d/%d" % (label, done, total), end="\r" if tty else "\n", flush=True)
+    if tty and done == total:
+        print()
+
+
+def load_with_progress(client, lines, live):
+    """folio_orders_loader.load() over the lines, a few POs at a time; same results."""
+    from folio_orders_loader.loader import load
+
+    by_po = {}
+    for line in lines:
+        by_po.setdefault(line["po_number"], []).append(line)
+    groups = list(by_po.values())
+    results = []
+    for start in range(0, len(groups), LOAD_BATCH):
+        chunk = [line for group in groups[start:start + LOAD_BATCH] for line in group]
+        results += load(client, chunk, live=live, check_budget=True)
+        show_progress("loading POs", min(start + LOAD_BATCH, len(groups)), len(groups))
+    return results
+
+
 def write_orders_ndjson(path, client, lines):
     """Write the composite-order payloads the loader would POST, one JSON object per line.
 
@@ -276,7 +307,8 @@ def write_orders_ndjson(path, client, lines):
     pos, problems = group_by_po(lines)
     count = 0
     with open(path, "w", encoding="utf-8") as handle:
-        for po, group in pos.items():
+        for done, (po, group) in enumerate(pos.items(), 1):
+            show_progress("building orders", done, len(pos))
             if po in problems:
                 continue
             try:
@@ -295,7 +327,6 @@ def load_orders(in_dir, ini, cfg, live, skip_accounts=False):
     fund / expense class for an Active budget first (check_budget=True), on dry run and live.
     """
     from folio_orders_loader.client import connect
-    from folio_orders_loader.loader import load
 
     lines = workbook_lines(in_dir, cfg)
     print("%d lines from %s" % (len(lines), in_dir))
@@ -318,7 +349,7 @@ def load_orders(in_dir, ini, cfg, live, skip_accounts=False):
     ndjson = Path(in_dir) / "logs" / ("orders_%s.ndjson" % started.strftime("%Y%m%d_%H%M%S"))
     ndjson.parent.mkdir(parents=True, exist_ok=True)
     print("%d order(s) written to %s" % (write_orders_ndjson(ndjson, client, lines), ndjson))
-    results = load(client, lines, live=live, check_budget=True)
+    results = load_with_progress(client, lines, live)
     log = write_load_log(Path(in_dir) / "logs", started, datetime.now(), live, ini,
                          in_dir, len(lines), results)
     print("load log: %s" % log)

@@ -28,7 +28,7 @@ through to blank order lines, so the dry-run budget check flags them `invalid` u
 or `ebsconet-configure` supplies values. Tests that need the TEST values get them from
 `tests/conftest.py` `with_test_values()` (used by the `cfg` fixtures in `test_prep.py` and
 `test_workflow.py`). 223 tests pass. Not yet re-run on the EC2 (`install.sh` re-run needed).
-224 tests pass, flake8 clean (`--max-line-length=100`).
+226 tests pass, flake8 clean (`--max-line-length=100`).
 
 ## Latest session (2026-10-21, pushed as `69c6ae5`)
 - The customer column is now **FOLIO Access Provider (optional)** (`added_columns.org` in
@@ -89,7 +89,11 @@ Number. `install.sh` re-run on the EC2 is needed to get the map there.
   `<out>/logs/orders_<ts>.ndjson`, one composite-order payload per line (what would be POSTed;
   invalid / lookup-failed POs left out). `write_orders_ndjson()` in the adapter builds it with the
   loader's `build_order`, so each order is built twice (once here, once in `load()`); the loader
-  package itself has no NDJSON code. Read-only lookups only. No test yet; not tried on a tenant.
+  package itself has no NDJSON code. Read-only lookups only. Not tried on a tenant.
+  **Progress (2026-10-27):** `load` shows `building orders: n/N` and `loading POs: n/N`
+  (`show_progress()`; in-place line on a tty, a line per 25 POs when redirected). The loader's
+  `load()` has no per-PO hook, so `load_with_progress()` feeds it `LOAD_BATCH` (10) POs at a time;
+  the loader's lookup cache is rebuilt per batch (slightly slower on big runs). 226 tests pass.
 - **Budget checks:** the adapter calls the loader's `load(..., check_budget=True)`, so every PO
   (dry run and `--live`) is checked for an Active budget per fund and a listed expense class;
   failures are `invalid` and nothing is POSTed. Blank expense classes skip the class half, and
