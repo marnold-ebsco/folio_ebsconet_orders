@@ -324,6 +324,10 @@ Safety features:
   handled in FOLIO first.
 - Each PO / line is saved as JSON in `out/deleted_backup/` (`PO_<number>.json`,
   `POL_<number>.json`) before it is deleted. This is for reference; there is no restore script.
+- Progress is shown while it runs (`checked n/total` on a dry run, `deleted n/total` live, with
+  elapsed time and an estimate of time left); redirected to a file it prints every 10 entries.
+- To undo a whole load, build the list from `out/logs/load_<timestamp>.csv`; see "Removing
+  Pending orders from a tenant" in `README.md` for the steps and EC2 paths.
 - `--max N` (default 50) refuses longer lists. A missing or duplicate number is logged and the
   run continues; the exit code is non-zero if any entry errored.
 - Results are written to `out/delete_log.csv` (statuses `deleted`, `dry-run`, `skipped`,

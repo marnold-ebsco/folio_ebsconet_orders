@@ -30,6 +30,27 @@ or `ebsconet-configure` supplies values. Tests that need the TEST values get the
 `test_workflow.py`). 223 tests pass. Not yet re-run on the EC2 (`install.sh` re-run needed).
 226 tests pass, flake8 clean (`--max-line-length=100`).
 
+## Session 2026-11-06: undo a load on the EC2 (Moffitt)
+- Walked through removing the 140 POs of the 2026-10-27 live load (`moffitt.ini`) on the EC2
+  (`/working/migration/scripts/ebsconet`). Source list = `work/out/logs/load_20261027_203231.csv`
+  (all 140 `created`). Dry run was clean (140 `dry-run`); the `--live` run was given but its
+  result was **not seen**. Check `work/out/delete_log.csv` (`140 deleted`) and
+  `work/out/deleted_backup/`. The load's vendor accounts (`out/logs/accounts_*.txt`) are not
+  undone by the delete; remove them in FOLIO by hand.
+- `folio_delete_orders.py`: added a progress line (`checked|deleted n/total`, elapsed, ETA;
+  every 10 entries when not a terminal). `run()` takes an optional `progress(done, total)`.
+  `--max` defaults to 50; use `--max 140` or more for a full load.
+- README.md: new section "Removing Pending orders from a tenant (undo a load)" with EC2 paths
+  (venv is `venv/`, script is `app/folio_delete_orders.py`; use full paths, a relative `../venv`
+  gives harmless `sys.prefix` RuntimeWarnings). README_API.md: pointer and progress bullets.
+- Not built: a `--from-log` option on `folio_delete_orders.py` to skip the awk/sed step.
+- `ebsconet-configure` on the EC2: the command is `ebsconet-configure` (in `bin/`, not linked
+  into `~/.local/bin`). `--from-worksheet` needs a path that resolves from the current folder
+  (run from `work/`); it only edits `ebsconet_config.json` (backup `.bak-<time>`), never the
+  `.ini`. The openpyxl "Data Validation extension" warning is harmless.
+- Still to do on the EC2: `install.sh` re-run to get the progress display, plus the earlier open
+  items below.
+
 ## Latest session (2026-10-21, pushed as `69c6ae5`)
 - The customer column is now **FOLIO Access Provider (optional)** (`added_columns.org` in
   `pipeline/pipeline_config.json`), with a hover note on the header (`HEADER_NOTES` in

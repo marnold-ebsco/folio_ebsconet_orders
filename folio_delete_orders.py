@@ -12,6 +12,8 @@ deleted; --max stops a runaway list. Results go to a CSV log.
 import argparse
 import csv
 import json
+import sys
+import time
 from pathlib import Path
 
 TYPES = {"PO", "POL"}
@@ -88,15 +90,33 @@ def delete_pol(client, number, live, backup_dir):
     return "deleted", note
 
 
-def run(client, targets, live, backup_dir):
+def show_progress(done, total, started, live):
+    """Print 'checked|deleted done/total, elapsed, ETA'. A terminal gets one updating
+    line; a log or pipe gets a line every 10 entries and at the end."""
+    tty = sys.stdout.isatty()
+    if not tty and done != total and done % 10:
+        return
+    elapsed = time.monotonic() - started
+    eta = elapsed / done * (total - done)
+    print("%s %d/%d  elapsed %ds  remaining ~%ds" % (
+        "deleted" if live else "checked", done, total, elapsed, eta),
+        end="\r" if tty else "\n", flush=True)
+    if tty and done == total:
+        print()
+
+
+def run(client, targets, live, backup_dir, progress=None):
+    """Process each target; progress(done, total) is called after each one."""
     results = []
-    for kind, number, note in targets:
+    for done, (kind, number, note) in enumerate(targets, 1):
         try:
             fn = delete_po if kind == "PO" else delete_pol
             status, detail = fn(client, number, live, backup_dir)
         except Exception as exc:  # keep going; the log shows what failed
             status, detail = "error", "%s: %s" % (type(exc).__name__, exc)
         results.append((kind, number, status, detail, note))
+        if progress:
+            progress(done, len(targets))
     return results
 
 
@@ -130,7 +150,9 @@ def main(argv=None):
     client = connect(args.ini)
     print("%d entries; %s (%s)" % (len(targets), "LIVE - DELETING" if args.live
                                    else "dry run", args.ini))
-    results = run(client, targets, args.live, args.backup_dir)
+    started = time.monotonic()
+    results = run(client, targets, args.live, args.backup_dir,
+                  lambda done, total: show_progress(done, total, started, args.live))
     write_log(args.log, results)
     for kind, number, status, detail, _ in results:
         print("%-3s %-16s %-10s %s" % (kind, number, status, detail))
