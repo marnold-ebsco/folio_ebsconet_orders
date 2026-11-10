@@ -45,7 +45,7 @@ def export_rows(lines):
 
 
 TITLE_MAP_FIELDS = [
-    "po_number", "pol_number", "folio_po_uuid", "po_status", "title", "issn",
+    "po_number", "pol_number", "matches_po_plus_1", "folio_po_uuid", "po_status", "title", "issn",
     "title_number", "title_number_type", "vendor_po_number", "vendor_account",
     "subscription_from", "subscription_to", "publisher", "order_format",
     "po_line_description", "pol_id"]
@@ -84,9 +84,11 @@ def title_map_rows(lines, id_types, statuses):
                 other = (pid.get("productId", ""), kind)
         vendor = line.get("vendorDetail") or {}
         refs = [r.get("refNumber", "") for r in vendor.get("referenceNumbers") or []]
+        po, suffix = split_pol(pol)
         rows.append({
-            "po_number": split_pol(pol)[0],
+            "po_number": po,
             "pol_number": pol,
+            "matches_po_plus_1": "yes" if suffix == "1" else "NO - line %s" % suffix,
             "folio_po_uuid": line.get("purchaseOrderId", ""),
             "po_status": statuses.get(line.get("purchaseOrderId"), ""),
             "title": line.get("titleOrPackage", ""),

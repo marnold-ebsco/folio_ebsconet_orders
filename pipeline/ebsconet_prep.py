@@ -8,6 +8,7 @@ import argparse
 import csv
 import json
 import re
+import shutil
 from collections import Counter
 from datetime import date, datetime
 from urllib.parse import urlsplit, urlunsplit
@@ -635,6 +636,10 @@ def prepare_for_customer(input_path, out_dir, cfg, lists=None):
 
     folder = Path(out_dir) / "customer"
     folder.mkdir(parents=True, exist_ok=True)
+    # Untouched copy of the SOP for `finish`, which builds send_to_ebsconet.xlsx from it.
+    copy = Path(out_dir) / "sop_original.xlsx"
+    if Path(input_path).resolve() != copy.resolve():
+        shutil.copy2(input_path, copy)
     stem = Path(input_path).stem
     target = folder / ("%s_for_customer.xlsx" % stem)
     wb = Workbook()

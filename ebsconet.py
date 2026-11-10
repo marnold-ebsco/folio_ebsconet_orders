@@ -11,7 +11,7 @@
                           (the profiles are only needed for --use-marc)
   load                    create the POs through the Orders API (default); with
                           --use-marc: preflight + load the MARC files by Data Import
-  finish                  export the PO / POL numbers for EBSCONET (out/pol_export.csv)
+  finish                  export the PO / POL / title map for EBSCONET (out/po_title_map.xlsx)
                           and the PO / title map (out/po_title_map.csv and .xlsx);
                           with --use-marc, first convert the loaded POs to ongoing
 
@@ -138,6 +138,26 @@ def load_marc(args, cfg):
     return 1 if any(outcome.values()) else 0
 
 
+def write_send_file(out, cfg, title_map):
+    """Write out/send_to_ebsconet.xlsx from the saved SOP copy and the loaded lines."""
+    from pipeline import send_to_ebsconet as send
+    sop = Path(out) / send.SOP_COPY
+    if not sop.exists():
+        print("%s not found, so %s was NOT written. Copy the original SOP there (it is "
+              "saved by for-customer) and run finish again." % (sop, send.SEND_FILE))
+        return
+    _, sop_rows = prep.read_sop(sop)
+    c = cfg["columns"]
+    matched, unmatched = send.match_rows(sop_rows, title_map, c["order_number"],
+                                         c["title"], c["issn"])
+    target = Path(out) / send.SEND_FILE
+    print("Send to EBSCONET: %d lines -> %s" % (send.write_send_file(target, matched), target))
+    if unmatched:
+        print("  CHECK: %d loaded line(s) have no matching SOP row and are not in the file: %s"
+              % (len(unmatched), ", ".join(r["pol_number"] for r in unmatched[:10])
+                 + (" ..." if len(unmatched) > 10 else "")))
+
+
 def cmd_finish(args, cfg):
     from pipeline import folio_export_pols
     from pipeline import folio_ongoing
@@ -175,11 +195,6 @@ def cmd_finish(args, cfg):
         print("%d PO numbers; the API load already set order type and renewal "
               "details, so there is no ongoing conversion" % len(numbers))
     lines = list(folio_export_pols.fetch_lines(client, po_numbers=numbers))
-    rows = folio_export_pols.export_rows(lines)
-    export = Path(args.out) / "pol_export.csv"
-    folio_export_pols.write_csv(export, rows)
-    odd = sum(1 for r in rows if r["matches_po_plus_1"] != "yes")
-    print("PO / POL export: %d lines -> %s (%d not PO+'-1')" % (len(rows), export, odd))
     if lines:
         id_types = folio_export_pols.fetch_identifier_types(client)
         statuses = folio_export_pols.fetch_po_statuses(
@@ -189,7 +204,10 @@ def cmd_finish(args, cfg):
     title_map = folio_export_pols.title_map_rows(lines, id_types, statuses)
     map_csv = Path(args.out) / "po_title_map.csv"
     xlsx = folio_export_pols.write_title_map(map_csv, title_map)
-    print("PO / title map: %d lines -> %s and %s" % (len(title_map), map_csv, xlsx.name))
+    odd = sum(1 for r in title_map if r["matches_po_plus_1"] != "yes")
+    print("PO / title map: %d lines -> %s and %s (%d not PO+'-1')"
+          % (len(title_map), map_csv, xlsx.name, odd))
+    write_send_file(args.out, cfg, title_map)
     return 1 if counts.get("error") else 0
 
 

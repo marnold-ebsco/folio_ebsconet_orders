@@ -53,6 +53,8 @@ def test_stage1_removes_zero_dollar_lines_and_adds_highlighted_columns(cfg, tmp_
         "FOLIO Order Type", "FOLIO Renewal Interval (Days)"]}
     assert s["file"] == tmp_path / "out" / "customer" / "SOP_for_customer.xlsx"
     assert s["sheets"] == {"online": "electronic"}
+    saved = load_workbook(tmp_path / "out" / "sop_original.xlsx")   # untouched SOP copy
+    assert saved.active.max_row == 7                                # header + all 6 rows
     wb = load_workbook(s["file"])
     assert wb.sheetnames[:2] == ["Defaults", "electronic"]      # settings first
     ws = wb["electronic"]
@@ -235,10 +237,29 @@ def test_finish_api_route_exports_without_ongoing_conversion(tmp_path, monkeypat
         return []
 
     monkeypatch.setattr(folio_export_pols, "fetch_lines", fetch)
-    monkeypatch.setattr(folio_export_pols, "export_rows", lambda lines: [])
-    monkeypatch.setattr(folio_export_pols, "write_csv", lambda path, rows: None)
     assert cli.main(["--out", str(tmp_path), "finish", "--ini", "t.ini"]) == 0
     assert seen["numbers"] == ["A1", "A2"]
+    assert (tmp_path / "po_title_map.csv").exists()
+    assert not (tmp_path / "pol_export.csv").exists()
+
+
+def test_finish_writes_send_to_ebsconet_from_the_saved_sop(tmp_path, monkeypatch):
+    from pipeline import folio_export_pols, folio_common
+    from pipeline import folio_orders_adapter as adapter
+    make_sop(tmp_path / "sop_original.xlsx", ROWS)
+    monkeypatch.setattr(adapter, "workbook_lines", lambda d, c: [{"po_number": "A"}])
+    monkeypatch.setattr(folio_common, "connect", lambda ini: object())
+    monkeypatch.setattr(folio_export_pols, "fetch_lines", lambda client, po_numbers: [
+        {"id": "x", "poLineNumber": "A-1", "purchaseOrderId": "P", "titleOrPackage": "Paid"}])
+    monkeypatch.setattr(folio_export_pols, "fetch_identifier_types", lambda client: {})
+    monkeypatch.setattr(folio_export_pols, "fetch_po_statuses", lambda client, ids: {})
+    assert cli.main(["--out", str(tmp_path), "finish", "--ini", "t.ini"]) == 0
+    ws = load_workbook(tmp_path / "send_to_ebsconet.xlsx").active
+    head = [c.value for c in ws[1]]
+    row = dict(zip(head, [c.value for c in ws[2]]))
+    assert ws.max_row == 2                       # only the loaded line, not the other 5
+    assert row["Title Name"] == "Paid" and row["ILS Number"] == "A-1"
+    assert row["Total Cost"] == 100.5
 
 
 def test_setup_passes_its_options_through(monkeypatch):

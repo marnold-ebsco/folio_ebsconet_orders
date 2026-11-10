@@ -6,7 +6,7 @@ EBSCONET needs. One command drives the whole workflow: `ebsconet.py`.
 
 ```
 for-customer SOP.xlsx   ->  customer fills in columns  ->  build FILLED*.xlsx
-   ->  load (dry run, then --live)  ->  finish  ->  out/pol_export.csv to EBSCONET
+   ->  load (dry run, then --live)  ->  finish  ->  out/send_to_ebsconet.xlsx to EBSCONET
 ```
 
 What you get: one Pending PO per EBSCONET order number. **Several spreadsheet rows with the
@@ -244,10 +244,20 @@ type.
 ```
 Orders are created Pending with the order type and renewal interval already on the line, so
 `finish` has no conversion to do; it only reads the POs back from FOLIO and writes
-`out/pol_export.csv`: PO number, POL number, title, subscription end, POL id and a
-`matches_po_plus_1` column. EBSCONET is told the POL number is the PO number plus `-1`, so
+`out/po_title_map.xlsx` and `.csv`, one row per order line: PO number, POL number, a
+`matches_po_plus_1` column, the PO UUID (`folio_po_uuid`), PO status, title, ISSN / title
+number, vendor PO number and account, subscription dates, publisher, format, line description
+and the POL UUID (`pol_id`). EBSCONET is told the POL number is the PO number plus `-1`, so
 any line that is not `-1` (such as the second line of a two-line PO) is flagged
-`NO - line N` for you to handle by hand. Send `pol_export.csv` to EBSCONET. `finish` takes
+`NO - line N` for you to handle by hand.
+
+**What to send:** `out/send_to_ebsconet.xlsx`. It has the 53 SOP columns EBSCONET expects, in
+that order, with `ILS Number` last. It holds one row per line that loaded, copied unchanged from
+the original SOP, and `ILS Number` is the POL number (for example `U2856517-1`, not a UUID).
+Rows that did not load ($0, Fee, unrecognized format, or a failed PO) are not in it. `finish`
+reads the SOP from `out/sop_original.xlsx`, which `for-customer` saves; for a run started
+before this existed, copy the original SOP to that name. If a loaded line has no matching SOP
+row, `finish` prints a CHECK line. `po_title_map` stays as the internal reference. `finish` takes
 `--live` for symmetry but writes nothing to FOLIO.
 
 ## Data rules
@@ -287,7 +297,9 @@ Active budget.
 | `library-EBSCONET_online / -print / _P-E.xlsx` | build | The filled-in lines split by format; what `load` reads |
 | `prep_report.txt`, `prep_exclusions.csv`, `prep_no_issn.csv`, `prep_defaults_used.csv` | build | What was excluded, loaded without an ISSN, or given a default |
 | `order_settings.csv` | build | Each order's type and renewal interval |
-| `pol_export.csv` | finish | The PO / POL list for EBSCONET |
+| `send_to_ebsconet.xlsx` | finish | The file for EBSCONET: loaded SOP rows plus `ILS Number` (POL number) |
+| `po_title_map.csv`, `po_title_map.xlsx` | finish | Internal PO / POL / UUID / title reference |
+| `sop_original.xlsx` | for-customer | Untouched copy of the SOP that `finish` reads |
 | `deleted_backup/` | delete tools | JSON copy of each PO / line before it is deleted |
 
 `build` rebuilds everything in `out/`, so keep each SOP's files together or give each SOP its

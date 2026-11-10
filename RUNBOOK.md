@@ -28,7 +28,7 @@ unless a command says `--live`.
                                                                 the file; repeat 5-6
                              7. ebsconet.py load --ini ... --live
                              8. ebsconet.py finish --ini ...
-                             9. send out/pol_export.csv to EBSCONET
+                             9. send out/send_to_ebsconet.xlsx to EBSCONET
 ```
 
 `load` creates the orders through the Orders API. The MARC / Data Import route is the
@@ -165,11 +165,16 @@ Nothing for us to do. A blank cell falls back to the defaults in the config.
 - [ ] Something failed? Section D.
 
 ### 8-9. The EBSCONET hand-off
-- [ ] `.venv/bin/python ebsconet.py finish --ini TENANT.ini` writes `out/pol_export.csv`.
+- [ ] `.venv/bin/python ebsconet.py finish --ini TENANT.ini` writes `out/send_to_ebsconet.xlsx` (and the internal `po_title_map.xlsx` / `.csv`).
+      It needs `out/sop_original.xlsx`, which `for-customer` saves; if the run started
+      earlier, copy the original SOP to that name first.
       There is no ongoing conversion on this route (the settings were applied at load),
       so `--live` changes nothing.
-- [ ] Send `out/pol_export.csv` to EBSCONET. The POL number is the PO number + `-1`;
-      any line not ending in `-1` is flagged `NO - line N` for you to sort out by hand.
+- [ ] Send `out/send_to_ebsconet.xlsx` to EBSCONET: the SOP rows that loaded, unchanged, with
+      the POL number in `ILS Number`. The POL number is the PO number + `-1`; check
+      `matches_po_plus_1` in `po_title_map.csv` for any line not ending in `-1`
+      (`NO - line N`) and sort those out by hand. `finish` prints a CHECK line if a loaded
+      line has no SOP row.
 
 ### Backup route: MARC / Data Import (`--use-marc`)
 Use this when the Orders API load cannot be used. It replaces steps 6-9 above; run
@@ -231,8 +236,11 @@ as is was made on 2026-09-30; revisit it if the renewal dates should work differ
       dates in `out/ongoing_log.csv` and writes the PO / POL export).
 - [ ] Same with `--live` to convert the POs to ongoing orders. Orders stay **Pending**.
       In FOLIO each converted order shows type Ongoing and status Pending.
-- [ ] Send `out/pol_export.csv` to EBSCONET. The POL number is the PO number + `-1`;
-      any line not ending in `-1` is flagged `NO - line N` for you to sort out by hand.
+- [ ] Send `out/send_to_ebsconet.xlsx` to EBSCONET: the SOP rows that loaded, unchanged, with
+      the POL number in `ILS Number`. The POL number is the PO number + `-1`; check
+      `matches_po_plus_1` in `po_title_map.csv` for any line not ending in `-1`
+      (`NO - line N`) and sort those out by hand. `finish` prints a CHECK line if a loaded
+      line has no SOP row.
 
 ### Wrap up
 - [ ] Keep `out/` (reports, audit logs, backups) with the project records.
@@ -268,7 +276,9 @@ files together (or use a separate `--out` folder per SOP, e.g. `--out out/2026-s
 | `prep_report.txt`, `prep_exclusions.csv`, `prep_no_issn.csv`, `prep_defaults_used.csv` | build | What was excluded, loaded without an ISSN, or given a default |
 | `logs/accounts_<timestamp>.txt` | load | Vendor accounts added (or that would be): mode, start / end / elapsed time, account numbers |
 | `logs/orders_<timestamp>.ndjson` | load | The order payloads the load would POST, one per line (dry run too); invalid POs are left out |
-| `pol_export.csv` | finish | The PO / POL list for EBSCONET |
+| `send_to_ebsconet.xlsx` | finish | The file for EBSCONET: loaded SOP rows plus `ILS Number` (POL number) |
+| `po_title_map.csv`, `po_title_map.xlsx` | finish | Internal PO / POL / UUID / title reference |
+| `sop_original.xlsx` | for-customer | Untouched copy of the SOP that `finish` reads |
 | `marc/*.mrc`, `marc/*.mrk` | build | MARC route: files for Data Import, and readable text copies |
 | `import_logs/*.csv` | load --use-marc | MARC route: audit log of each import |
 | `ongoing_log.csv` | finish --use-marc | MARC route: conversion results |

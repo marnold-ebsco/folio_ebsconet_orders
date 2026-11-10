@@ -157,6 +157,9 @@ def test_title_map_rows_and_files(tmp_path):
     assert rows[0]["title_number_type"] == "Title number"
     assert rows[0]["vendor_po_number"] == "V1; V2" and rows[0]["po_status"] == "Pending"
     assert rows[1]["issn"] == "" and rows[1]["vendor_account"] == ""
+    assert [r["matches_po_plus_1"] for r in rows] == ["yes", "yes"]
+    two = exp.title_map_rows([{"id": "x", "poLineNumber": "E3-2"}], {}, {})
+    assert two[0]["matches_po_plus_1"] == "NO - line 2"
     xlsx = exp.write_title_map(tmp_path / "m.csv", rows)
     assert xlsx.exists()
     first = list(csv.DictReader(open(tmp_path / "m.csv", encoding="utf-8")))[0]

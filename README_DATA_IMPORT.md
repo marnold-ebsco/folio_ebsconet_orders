@@ -7,7 +7,7 @@ drives the whole workflow: `ebsconet.py`.
 
 ```
 for-customer SOP.xlsx -> customer fills in columns -> build FILLED*.xlsx -> setup (once per tenant)
-   -> load --use-marc (preflight dry run, then --live) -> finish --use-marc -> out/pol_export.csv
+   -> load --use-marc (preflight dry run, then --live) -> finish --use-marc -> out/send_to_ebsconet.xlsx
 ```
 
 Data Import creates every order as One-Time and Pending and cannot set the ongoing details
@@ -272,8 +272,8 @@ class, or the PO line is discarded ("Budget expense class not found").
 `finish --use-marc` takes the PO numbers from the MARC files, converts the orders to ongoing
 (following the customer's choices in `out/order_settings.csv`: One-Time orders stay One-Time,
 Ongoing orders get the customer's interval), writes `out/ongoing_log.csv`, then writes
-`out/pol_export.csv`. Without `--live` the conversion is a dry run (the log shows the renewal
-dates) and the orders stay One-Time; the PO / POL export is written either way. The command
+`out/po_title_map.xlsx` and `.csv`. Without `--live` the conversion is a dry run (the log shows the renewal
+dates) and the orders stay One-Time; the PO / title map is written either way. The command
 exits 1 if any conversion errored.
 
 Each order has two separate settings: its **status** (Pending / Open / Closed) and its
@@ -311,10 +311,15 @@ list of PO numbers (the Orders app CSV export with a "PO number" column, or one 
 .venv/bin/python -m pipeline.folio_ongoing po_numbers.csv --ini my_tenant.ini --live
 ```
 
-**PO / POL export.** `out/pol_export.csv` has PO number, POL number, title, subscription end,
-POL id and a `matches_po_plus_1` column. EBSCONET is told the POL number is the PO number plus
-`-1`, so any line that is not `-1` (such as the second line of a two-line PO) is flagged
-`NO - line N` for you to handle by hand. Send it to EBSCONET. Stand-alone:
+**PO / title map.** `finish` writes `out/po_title_map.xlsx` (and `.csv`) with one row per order
+line: PO number, POL number, a `matches_po_plus_1` column, the PO UUID (`folio_po_uuid`), PO
+status, title, ISSN / title number, vendor PO number and account, subscription dates, publisher,
+format, line description and the POL UUID (`pol_id`). EBSCONET is told the POL number is the PO
+number plus `-1`, so any line that is not `-1` (such as the second line of a two-line PO) is
+flagged `NO - line N` for you to handle by hand. This is the internal reference; **send
+`out/send_to_ebsconet.xlsx`** to EBSCONET instead (the loaded SOP rows, unchanged, with the POL
+number in `ILS Number`; see "What to send" in `README_API.md`). Both cover the POs in this run. For an older load, the stand-alone tool writes a shorter list (PO number, POL
+number, title, subscription end, POL id and the same flag) as `out/pol_export.csv`:
 ```
 .venv/bin/python -m pipeline.folio_export_pols --prefix E50 --ini my_tenant.ini
 .venv/bin/python -m pipeline.folio_export_pols --csv po_numbers.csv --ini my_tenant.ini
@@ -364,7 +369,7 @@ one. The fund still needs an Active budget.
 | `profiles/` | setup | The generated mapping-profile JSON, for review |
 | `import_logs/*.csv` | load | Audit log of each import |
 | `retry/` | folio_retry_failed.py | Retry .mrc and delete CSV |
-| `ongoing_log.csv`, `pol_export.csv` | finish | Conversion results; the PO / POL list for EBSCONET |
+| `ongoing_log.csv`, `po_title_map.csv`, `po_title_map.xlsx`, `send_to_ebsconet.xlsx` | finish | Conversion results; the internal PO / title map; the file for EBSCONET |
 | `add_lines_log.csv`, `delete_log.csv`, `deleted_backup/` | the tools below | Logs and backups |
 
 `build` rebuilds everything in `out/`, so keep each SOP's files together or give each SOP its

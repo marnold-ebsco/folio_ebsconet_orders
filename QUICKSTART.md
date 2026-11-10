@@ -85,7 +85,8 @@ ebsconet load --ini TENANT.ini --live
 ebsconet finish --ini TENANT.ini --live
 ```
 
-Send `out/pol_export.csv` to EBSCOnet. The POL number is the PO number plus `-1`; a line
+Send `out/send_to_ebsconet.xlsx` to EBSCOnet (the loaded SOP rows with the POL number in
+`ILS Number`). The POL number is the PO number plus `-1`; a line
 not ending in `-1` is flagged `NO - line N` for you to sort out by hand.
 
 ## Backup route and troubleshooting

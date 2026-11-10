@@ -30,23 +30,36 @@ or `ebsconet-configure` supplies values. Tests that need the TEST values get the
 `test_workflow.py`). 223 tests pass. Not yet re-run on the EC2 (`install.sh` re-run needed).
 226 tests pass, flake8 clean (`--max-line-length=100`).
 
-## Open question (2026-11-10): can `pol_export.csv` be dropped?
-Waiting on **EBSCONET**: do they use `out/po_title_map.csv/.xlsx` instead of `out/pol_export.csv`?
-- Confirmed in code: `po_title_map` has both UUIDs, `folio_po_uuid` = line `purchaseOrderId`
-  (the PO UUID) and `pol_id` = line `id` (the POL UUID). `pol_export.csv` has only `pol_id`.
-  Not run against a tenant; user says the PO files are correct.
-- `pol_export.csv` (`finish`, `ebsconet.py:177-182`, `export_rows()`): po_number, pol_number,
-  title, subscription_to, pol_id, `matches_po_plus_1`. EBSCONET assumes POL = PO + `-1`; the
-  last column flags other lines as `NO - line N`. The title map has everything else in it but
-  **no** equivalent of that flag.
-- Still referenced: RUNBOOK (lines ~31, 168, 171, 234, 271), QUICKSTART:88, README_API (9, 247-250,
-  290), README_DATA_IMPORT (10, 275, 314-320, 367), `tests/test_workflow.py:238-239`, and the
-  standalone `python -m pipeline.folio_export_pols --prefix ...` tool (keep that one).
-- **If EBSCONET confirms the title map:** (1) stop writing `pol_export.csv` in `finish`;
-  (2) add a `matches_po_plus_1` column to `title_map_rows()` so the check is kept (update
-  `TITLE_MAP_FIELDS` and the test in `tests/test_folio_orders.py`); (3) change the docs above to
-  "send `po_title_map.xlsx`"; (4) fix the `test_workflow.py` monkeypatches.
-- **If not:** leave as is. Both files are written today; nothing to change.
+## Session 2026-11-10 (later): `send_to_ebsconet.xlsx` (uncommitted)
+- New `pipeline/send_to_ebsconet.py` + `finish` step: `out/send_to_ebsconet.xlsx` has the 53
+  headers the user listed (SOP order, `ILS Number` last = POL number, not UUID), one row per
+  **loaded** line, every other value copied unchanged from the original SOP.
+- `for-customer` now saves an untouched copy as `out/sop_original.xlsx` (the prepared workbooks
+  drop ~30 SOP columns via `drop_columns`, so `finish` cannot use them). **Existing runs (e.g.
+  Moffitt) have no copy:** copy the original SOP to `work/out/sop_original.xlsx`, then re-run
+  `finish`; without it `finish` prints a note and skips the file.
+- Matching: FOLIO lines (title map rows) to SOP rows by Order Number, then Title + ISSN, then
+  Title; a different title matches only if it is the PO's lone remaining SOP row. Unmatched loaded
+  lines are listed in a `CHECK` line and left out. Multi-line POs across formats are the weak spot.
+- User's choices: save the copy at for-customer (not `--sop`); loaded rows only; keep original
+  values; keep `po_title_map` alongside. 233 tests pass, flake8 clean. Not run on a tenant.
+- Docs updated (RUNBOOK, QUICKSTART, README_API, README_DATA_IMPORT) to "send
+  `send_to_ebsconet.xlsx`". EBSCONET still has not confirmed the format.
+
+## Session 2026-11-10: `finish` no longer writes `pol_export.csv`
+- `finish` now writes only `out/po_title_map.csv` / `.xlsx`. Its new column `matches_po_plus_1`
+  (after `pol_number`) carries the old check: `yes` or `NO - line N`; `finish` prints how many
+  lines are not PO+`-1`. Applies to the MARC route too (same code).
+- Both UUIDs are in the map: `folio_po_uuid` = line `purchaseOrderId` (PO UUID), `pol_id` =
+  line `id` (POL UUID). Not run against a tenant; the user says the PO files are correct.
+- **Open: EBSCONET has not confirmed** they accept the title map in place of `pol_export.csv`.
+  If they still need the old file, run the stand-alone tool (kept):
+  `python -m pipeline.folio_export_pols --prefix E50 --ini TENANT.ini` (or `--csv`), or restore
+  the `export_rows` / `write_csv` calls in `ebsconet.py` `finish` (git history, before this commit).
+- Docs updated: RUNBOOK, QUICKSTART, README_API, README_DATA_IMPORT now say "send
+  `po_title_map.xlsx`". Older notes below that mention `pol_export.csv` describe past runs.
+  To delete a load by PO number use the `po_number` column of the map (or the load log CSV).
+- 226 tests pass, flake8 clean. EC2 needs an `install.sh` re-run to get this.
 
 ## Session 2026-11-06: undo a load on the EC2 (Moffitt)
 - Walked through removing the 140 POs of the 2026-10-27 live load (`moffitt.ini`) on the EC2
