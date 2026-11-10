@@ -30,6 +30,24 @@ or `ebsconet-configure` supplies values. Tests that need the TEST values get the
 `test_workflow.py`). 223 tests pass. Not yet re-run on the EC2 (`install.sh` re-run needed).
 226 tests pass, flake8 clean (`--max-line-length=100`).
 
+## Open question (2026-11-10): can `pol_export.csv` be dropped?
+Waiting on **EBSCONET**: do they use `out/po_title_map.csv/.xlsx` instead of `out/pol_export.csv`?
+- Confirmed in code: `po_title_map` has both UUIDs, `folio_po_uuid` = line `purchaseOrderId`
+  (the PO UUID) and `pol_id` = line `id` (the POL UUID). `pol_export.csv` has only `pol_id`.
+  Not run against a tenant; user says the PO files are correct.
+- `pol_export.csv` (`finish`, `ebsconet.py:177-182`, `export_rows()`): po_number, pol_number,
+  title, subscription_to, pol_id, `matches_po_plus_1`. EBSCONET assumes POL = PO + `-1`; the
+  last column flags other lines as `NO - line N`. The title map has everything else in it but
+  **no** equivalent of that flag.
+- Still referenced: RUNBOOK (lines ~31, 168, 171, 234, 271), QUICKSTART:88, README_API (9, 247-250,
+  290), README_DATA_IMPORT (10, 275, 314-320, 367), `tests/test_workflow.py:238-239`, and the
+  standalone `python -m pipeline.folio_export_pols --prefix ...` tool (keep that one).
+- **If EBSCONET confirms the title map:** (1) stop writing `pol_export.csv` in `finish`;
+  (2) add a `matches_po_plus_1` column to `title_map_rows()` so the check is kept (update
+  `TITLE_MAP_FIELDS` and the test in `tests/test_folio_orders.py`); (3) change the docs above to
+  "send `po_title_map.xlsx`"; (4) fix the `test_workflow.py` monkeypatches.
+- **If not:** leave as is. Both files are written today; nothing to change.
+
 ## Session 2026-11-06: undo a load on the EC2 (Moffitt)
 - Walked through removing the 140 POs of the 2026-10-27 live load (`moffitt.ini`) on the EC2
   (`/working/migration/scripts/ebsconet`). Source list = `work/out/logs/load_20261027_203231.csv`
