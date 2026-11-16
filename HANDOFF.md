@@ -324,6 +324,14 @@ unrewritten MARC-only rows in RUNBOOK section D.
 - `requirements.txt` pins `folio_orders_loader` by git tag (`@v0.3.4`). After a pin bump,
   reinstall: `.venv/bin/pip install --force-reinstall --no-deps <requirements line>` (a plain
   install does not upgrade).
+- **phpFolioClient is not a dependency of this pipeline** (confirmed 2026-11-16, see
+  `bugfest_test.md:15` — "phpFolioClient2 not tested (not used)"). EBSCOnet is pure Python
+  against `folio_orders_loader`/`folioclient`. `phpFolioClient` released v2.1.0 on
+  2026-11-16 (B29: `$tenant_id` was silently ignored by every request method — see
+  `~/phpFolioClient2/ISSUES.md`), tagged and pushed; there is no pin here to bump for it.
+  If a future session is asked to "bump the EBSCOnet pin" to a new phpFolioClient version,
+  check `phpOrganizationsBuilder/composer.json` or `folioclienttest/composer.json` instead —
+  this repo has no such pin.
 - PO numbers must match `^[a-zA-Z0-9]{1,22}$` (no hyphens).
 - Keep sessions short and single-purpose (a long session cost ~1.3M tokens).
 - Commands time out at about 2 minutes; run long loads in the background.
